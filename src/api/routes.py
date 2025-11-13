@@ -1,0 +1,252 @@
+"""
+API routes for the Virtual Debate Panel.
+"""
+import time
+from typing import Dict
+
+from fastapi import APIRouter, HTTPException
+from loguru import logger
+
+from src.data.models import Query
+
+from .schemas import (
+    AuthorListResponse,
+    AuthorResponseSchema,
+    DebatePanelResponseSchema,
+    QueryRequest,
+)
+
+
+def create_router(services: Dict) -> APIRouter:
+    """
+    Create API router with injected services.
+
+    Args:
+        services: Dictionary of service instances
+
+    Returns:
+        Configured APIRouter
+    """
+    router = APIRouter(prefix="/api", tags=["debate-panel"])
+
+    @router.post("/query", response_model=DebatePanelResponseSchema)
+    async def query_debate_panel(request: QueryRequest):
+        """
+        Query the Virtual Debate Panel.
+
+        This endpoint:
+        1. Accepts a user query
+        2. Selects relevant authors (automatically or from specified list)
+        3. Generates responses from each author in parallel
+        4. Returns formatted debate panel response
+
+        **Phase 1 MVP**: Currently requires specified_authors to be set to ["marx"]
+        """
+        start_time = time.time()
+
+        try:
+            # Create Query object
+            query = Query(
+                text=request.text,
+                specified_authors=request.specified_authors,
+                max_authors=request.max_authors,
+                min_authors=request.min_authors,
+                relevance_threshold=request.relevance_threshold
+            )
+
+            # Get services
+            semantic_router = services["semantic_router"]
+            rag_pipeline = services["rag_pipeline"]
+            response_aggregator = services["response_aggregator"]
+            authors_dict = services["authors"]
+            embedding_provider = services["embedding_provider"]
+
+            # Step 1: Select authors
+            logger.info(f"Selecting authors for query: {query.text[:50]}...")
+            selection_result = semantic_router.select_authors(query)
+
+            if not selection_result.selected_authors:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No relevant authors found for query"
+                )
+
+            logger.info(
+                f"Selected {len(selection_result.selected_authors)} authors: "
+                f"{', '.join(selection_result.selected_authors)}"
+            )
+
+            # Step 2: Get author objects
+            selected_author_objs = [
+                authors_dict[author_id]
+                for author_id in selection_result.selected_authors
+                if author_id in authors_dict
+            ]
+
+            if not selected_author_objs:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Selected authors not found in author database"
+                )
+
+            # Step 3: Generate responses concurrently
+            logger.info("Generating responses from authors...")
+            author_responses = await rag_pipeline.generate_responses_concurrent(
+                query=query,
+                authors=selected_author_objs,
+                query_embedding=selection_result.query_vector
+            )
+
+            if not author_responses:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to generate any responses"
+                )
+
+            # Step 4: Aggregate responses
+            total_time_ms = (time.time() - start_time) * 1000
+            debate_response = response_aggregator.aggregate(
+                query=query,
+                author_responses=author_responses,
+                total_time_ms=total_time_ms,
+                selection_method=selection_result.selection_method
+            )
+
+            # Step 5: Format and return
+            return DebatePanelResponseSchema(
+                query_text=debate_response.query.text,
+                authors=[
+                    AuthorResponseSchema(
+                        author_id=resp.author_id,
+                        author_name=resp.author_name,
+                        response_text=resp.response_text,
+                        relevance_score=resp.relevance_score,
+                        generation_time_ms=resp.generation_time_ms
+                    )
+                    for resp in debate_response.authors
+                ],
+                total_time_ms=debate_response.total_time_ms,
+                selection_method=debate_response.selection_method,
+                author_count=debate_response.author_count
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error processing query: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error: {str(e)}"
+            )
+
+    @router.get("/authors", response_model=AuthorListResponse)
+    async def list_authors():
+        """
+        List all available authors.
+
+        Returns author profiles with their expertise domains and basic info.
+        """
+        try:
+            authors_dict = services["authors"]
+
+            authors_list = [
+                {
+                    "id": author.id,
+                    "name": author.name,
+                    "expertise_domains": author.expertise_domains,
+                    "bio": author.bio,
+                    "major_works": author.works
+                }
+                for author in authors_dict.values()
+            ]
+
+            return AuthorListResponse(
+                authors=authors_list,
+                total=len(authors_list)
+            )
+
+        except Exception as e:
+            logger.error(f"Error listing authors: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to retrieve authors"
+            )
+
+    @router.get("/authors/{author_id}")
+    async def get_author(author_id: str):
+        """
+        Get detailed information about a specific author.
+
+        Args:
+            author_id: Author identifier (e.g., 'marx', 'whitman', 'manson')
+        """
+        try:
+            authors_dict = services["authors"]
+
+            if author_id not in authors_dict:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Author not found: {author_id}"
+                )
+
+            author = authors_dict[author_id]
+
+            return {
+                "id": author.id,
+                "name": author.name,
+                "expertise_domains": author.expertise_domains,
+                "voice_characteristics": {
+                    "tone": author.voice_characteristics.tone,
+                    "vocabulary": author.voice_characteristics.vocabulary,
+                    "perspective": author.voice_characteristics.perspective,
+                    "style_notes": author.voice_characteristics.style_notes
+                },
+                "bio": author.bio,
+                "major_works": author.works
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error retrieving author: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to retrieve author"
+            )
+
+    @router.get("/rankings")
+    async def get_author_rankings(query: str):
+        """
+        Get all authors ranked by relevance to a query.
+
+        Useful for understanding how the semantic router evaluates authors
+        for a given query.
+
+        Args:
+            query: The query text to rank authors against
+        """
+        try:
+            semantic_router = services["semantic_router"]
+
+            query_obj = Query(text=query)
+            rankings = semantic_router.get_author_rankings(query_obj)
+
+            return {
+                "query": query,
+                "rankings": [
+                    {
+                        "author_id": author_id,
+                        "similarity_score": score
+                    }
+                    for author_id, score in rankings
+                ]
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting rankings: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to get author rankings"
+            )
+
+    return router

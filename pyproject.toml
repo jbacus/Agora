@@ -1,0 +1,72 @@
+[tool.poetry]
+name = "virtual-debate-panel"
+version = "0.1.0"
+description = "Multi-perspective chat application with RAG-based author responses"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.5.3"
+pydantic-settings = "^2.1.0"
+google-generativeai = "^0.3.2"
+openai = "^1.10.0"
+anthropic = "^0.8.1"
+chromadb = "^0.4.22"
+pinecone-client = "^3.0.1"
+sentence-transformers = "^2.3.1"
+tiktoken = "^0.5.2"
+numpy = "^1.26.3"
+scipy = "^1.12.0"
+pandas = "^2.1.4"
+pyyaml = "^6.0.1"
+python-dotenv = "^1.0.0"
+aiohttp = "^3.9.1"
+tenacity = "^8.2.3"
+python-multipart = "^0.0.6"
+httpx = "^0.26.0"
+loguru = "^0.7.2"
+rich = "^13.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-asyncio = "^0.23.3"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+black = "^24.1.1"
+ruff = "^0.1.14"
+mypy = "^1.8.0"
+faker = "^22.0.0"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --cov=src --cov-report=html --cov-report=term"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
