@@ -1,8 +1,11 @@
 # ============================================
 # Google Cloud Build Configuration
-# Backend Deployment to Cloud Run
+# Full-Stack Deployment (Backend + Frontend)
 # ============================================
-# Trigger: Pushes to main branch affecting backend code
+# Trigger: Pushes to main branch
+# Deploys:
+#   - Backend: Docker image to Cloud Run
+#   - Frontend: Static files to Cloud Storage
 
 steps:
   # Step 1: Build Docker image
@@ -50,11 +53,62 @@ steps:
       - '--set-secrets=GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}'
     waitFor: ['push-image']
 
+  # Step 4: Create GCS bucket for frontend (if it doesn't exist)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'create-frontend-bucket'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil ls -b gs://${_FRONTEND_BUCKET} || \
+        gsutil mb -l ${_REGION} gs://${_FRONTEND_BUCKET}
+    waitFor: ['deploy-cloud-run']
+
+  # Step 5: Configure bucket for static website hosting
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'configure-bucket-website'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil web set -m index.html -e index.html gs://${_FRONTEND_BUCKET}
+    waitFor: ['create-frontend-bucket']
+
+  # Step 6: Copy frontend files to bucket
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-frontend'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Update API endpoint in app.js
+        sed -i "s|http://localhost:8000|https://${_SERVICE_NAME}-${PROJECT_NUMBER}.${_REGION}.run.app|g" src/ui/app.js
+
+        # Sync files to bucket
+        gsutil -m rsync -r -d src/ui gs://${_FRONTEND_BUCKET}
+
+        # Set cache control for static assets
+        gsutil -m setmeta -h "Cache-Control:public, max-age=3600" gs://${_FRONTEND_BUCKET}/*.css
+        gsutil -m setmeta -h "Cache-Control:public, max-age=3600" gs://${_FRONTEND_BUCKET}/*.js
+        gsutil -m setmeta -h "Cache-Control:no-cache" gs://${_FRONTEND_BUCKET}/index.html
+    waitFor: ['configure-bucket-website']
+
+  # Step 7: Make bucket publicly accessible
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'set-bucket-permissions'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gsutil iam ch allUsers:objectViewer gs://${_FRONTEND_BUCKET}
+    waitFor: ['deploy-frontend']
+
 # Substitution variables (configure in Cloud Build trigger)
 substitutions:
   _REGION: 'us-central1'
   _SERVICE_NAME: 'agora-backend'
   _ARTIFACT_REGISTRY_REPO: 'agora-images'
+  _FRONTEND_BUCKET: 'agora-frontend-${PROJECT_ID}'  # GCS bucket for frontend
   _LLM_PROVIDER: 'gemini'
   _VECTOR_DB: 'chromadb'
   _EMBEDDING_MODEL: 'text-embedding-004'
@@ -75,4 +129,7 @@ timeout: '2400s'  # 40 minutes
 tags:
   - 'agora'
   - 'backend'
+  - 'frontend'
+  - 'full-stack'
   - 'cloud-run'
+  - 'cloud-storage'

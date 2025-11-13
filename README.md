@@ -278,11 +278,23 @@ pytest tests/integration/test_rag_pipeline.py
 
 ## 🚢 Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for:
-- Docker containerization
-- Cloud deployment (GCP, AWS)
-- Scaling strategies
-- Monitoring & logging
+**Fully Automated Deployment** via Google Cloud Build:
+```bash
+git push origin main  # Automatically deploys backend + frontend!
+```
+
+The deployment pipeline automatically:
+- ✅ Builds and deploys backend to Cloud Run
+- ✅ Deploys frontend to Cloud Storage
+- ✅ Configures API endpoints
+- ✅ Sets up public access
+- ✅ Total time: ~6-9 minutes
+
+### Documentation
+- **[Automated Deployment Guide](docs/AUTOMATED_DEPLOYMENT.md)** - Full automation setup
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Infrastructure setup
+- **[CI/CD Setup](docs/CI_CD_SETUP.md)** - Pipeline configuration
+- **[Service Accounts](docs/SERVICE_ACCOUNTS_GUIDE.md)** - Permissions setup
 
 ## 🤝 Contributing
 
@@ -301,4 +313,7 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**Note**: This project is in active development. Phase 1 MVP is currently being implemented.
+**Status**: All 6 implementation phases complete! ✅
+- ✅ Phase 1-2: Data acquisition & frontend
+- ✅ Phase 3-4: Streaming, caching, telemetry
+- ✅ Phase 5-6: Automated deployment & docs
