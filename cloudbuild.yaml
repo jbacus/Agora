@@ -1,0 +1,78 @@
+# ============================================
+# Google Cloud Build Configuration
+# Backend Deployment to Cloud Run
+# ============================================
+# Trigger: Pushes to main branch affecting backend code
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:latest'
+      - '.'
+    timeout: '1200s'
+
+  # Step 2: Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}'
+    waitFor: ['build-image']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:${SHORT_SHA}'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--timeout=300s'
+      - '--concurrency=80'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-env-vars=LLM_PROVIDER=${_LLM_PROVIDER},VECTOR_DB=${_VECTOR_DB},EMBEDDING_MODEL=${_EMBEDDING_MODEL},LOG_LEVEL=${_LOG_LEVEL}'
+      - '--set-secrets=GEMINI_API_KEY=${_GEMINI_API_KEY_SECRET}'
+    waitFor: ['push-image']
+
+# Substitution variables (configure in Cloud Build trigger)
+substitutions:
+  _REGION: 'us-central1'
+  _SERVICE_NAME: 'agora-backend'
+  _ARTIFACT_REGISTRY_REPO: 'agora-images'
+  _LLM_PROVIDER: 'gemini'
+  _VECTOR_DB: 'chromadb'
+  _EMBEDDING_MODEL: 'text-embedding-004'
+  _LOG_LEVEL: 'INFO'
+  _GEMINI_API_KEY: ''  # Set in trigger or use secret
+  _GEMINI_API_KEY_SECRET: 'GEMINI_API_KEY:latest'  # Secret Manager secret name
+
+# Build options
+options:
+  machineType: 'N1_HIGHCPU_8'  # Faster builds
+  logging: 'CLOUD_LOGGING_ONLY'
+  dynamicSubstitutions: true
+
+# Build timeout
+timeout: '2400s'  # 40 minutes
+
+# Tags for organizing builds
+tags:
+  - 'agora'
+  - 'backend'
+  - 'cloud-run'
