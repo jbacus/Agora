@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+!docs/ARCHITECTURE.md
+!docs/API.md
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# CI/CD (these are for building, not needed in container)
+.github/
+cloudbuild.yaml
+docker-compose.yml
+
+# Data (depends on strategy)
+# Uncomment if NOT doing build-time preprocessing:
+data/raw/
+data/processed/
+data/embeddings/
+
+# Vector DB (will be created at runtime)
+data/chroma_db/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp

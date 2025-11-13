@@ -1,0 +1,81 @@
+# ============================================
+# Docker Compose for Local Development
+# ============================================
+# Usage:
+#   docker-compose up -d        # Start services
+#   docker-compose logs -f      # View logs
+#   docker-compose down         # Stop services
+
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agora-backend
+    ports:
+      - "8000:8080"
+    environment:
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
+
+      # Vector DB Configuration
+      - VECTOR_DB=${VECTOR_DB:-chromadb}
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+
+      # API Configuration
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=${DEBUG:-false}
+
+      # RAG Configuration
+      - RELEVANCE_THRESHOLD=${RELEVANCE_THRESHOLD:-0.7}
+      - MIN_AUTHORS=${MIN_AUTHORS:-2}
+      - MAX_AUTHORS=${MAX_AUTHORS:-5}
+      - TOP_K_CHUNKS=${TOP_K_CHUNKS:-5}
+    volumes:
+      # Mount source code for hot-reload (development)
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./scripts:/app/scripts
+
+      # Persist vector database
+      - ./data/chroma_db:/app/data/chroma_db
+
+      # Persist logs
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Frontend development server
+  # Uncomment when frontend is ready
+  # frontend:
+  #   image: nginx:alpine
+  #   container_name: agora-frontend
+  #   ports:
+  #     - "3000:80"
+  #   volumes:
+  #     - ./src/ui:/usr/share/nginx/html:ro
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+
+# Named volumes for data persistence
+volumes:
+  chroma_data:
+    driver: local
+  logs_data:
+    driver: local
