@@ -1,13 +1,31 @@
 #!/bin/bash
 # ============================================
-# Frontend Deployment Script
+# Frontend Deployment Script (Manual)
 # Deploys Agora frontend to Google Cloud Storage
+# ============================================
+#
+# ⚠️  NOTE: Frontend deployment is now AUTOMATED via Cloud Build!
+#
+# This script is for MANUAL deployment only. Normally, you should just:
+#   git push origin main
+#
+# and Cloud Build will automatically deploy both backend AND frontend.
+#
+# Use this script only when:
+# - Testing frontend changes locally before commit
+# - Deploying frontend without backend changes
+# - Troubleshooting deployment issues
+#
+# For automated deployment, see: docs/DEPLOYMENT.md
 # ============================================
 
 set -e
 
-echo "🚀 Agora Frontend Deployment"
+echo "🚀 Agora Frontend Deployment (Manual)"
 echo "============================================"
+echo ""
+echo "⚠️  NOTE: Frontend deployment is now automated via Cloud Build"
+echo "   This script is for manual deployment only"
 echo ""
 
 # Get project ID

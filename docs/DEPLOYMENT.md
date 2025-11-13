@@ -24,21 +24,27 @@ GitHub Repository
     ↓ (push to main)
 Cloud Build Trigger
     ↓
-Build Docker Image
-    ↓
-Push to Artifact Registry
-    ↓
-Deploy to Cloud Run
+    ├─→ Build Docker Image
+    │      ↓
+    │   Push to Artifact Registry
+    │      ↓
+    │   Deploy Backend to Cloud Run
+    │
+    └─→ Deploy Frontend to Cloud Storage
+           ↓
+        Configure bucket for web hosting
+           ↓
+        Set public permissions
 ```
 
 ### Components
 
 - **Backend**: FastAPI app on Google Cloud Run
-- **Frontend**: Static files on Google Cloud Storage (future)
+- **Frontend**: Static files on Google Cloud Storage
 - **Vector DB**: ChromaDB (in-container, persistent volume)
 - **Images**: Artifact Registry
 - **Secrets**: Secret Manager
-- **CI/CD**: Cloud Build
+- **CI/CD**: Cloud Build (automated full-stack deployment)
 
 ### Resource Names
 
@@ -123,12 +129,18 @@ After running the setup script, create a Cloud Build trigger:
 3. Select **GitHub** and authorize
 4. Choose your repository: `YOUR_USERNAME/Agora`
 5. Click **"Create Trigger"** with these settings:
-   - **Name**: `agora-backend-deploy`
+   - **Name**: `agora-full-stack-deploy`
    - **Event**: Push to a branch
    - **Branch**: `^main$`
    - **Configuration**: Cloud Build configuration file
    - **Location**: `cloudbuild.yaml`
 6. Click **"Create"**
+
+**What Gets Deployed Automatically:**
+- ✅ Backend Docker image → Artifact Registry → Cloud Run
+- ✅ Frontend static files → Cloud Storage bucket
+- ✅ Bucket configured for web hosting with public access
+- ✅ API endpoint automatically configured in frontend
 
 **Option 2: gcloud CLI**
 
@@ -139,8 +151,8 @@ gcloud beta builds triggers create github \
   --repo-owner=YOUR_GITHUB_USERNAME \
   --branch-pattern="^main$" \
   --build-config=cloudbuild.yaml \
-  --name=agora-backend-deploy \
-  --description="Deploy Agora backend to Cloud Run" \
+  --name=agora-full-stack-deploy \
+  --description="Deploy Agora backend and frontend (full-stack)" \
   --region=us-central1
 ```
 
@@ -152,17 +164,33 @@ git add .
 git commit -m "Initial deployment"
 git push origin main
 
-# Monitor build
+# Monitor build (both backend and frontend deployment)
 gcloud builds list --limit=5
 
 # View logs
 gcloud builds log $(gcloud builds list --limit=1 --format='value(ID)')
 
-# Get service URL
+# Get backend API URL
 gcloud run services describe agora-backend \
   --region=us-central1 \
   --format='value(status.url)'
+
+# Get frontend URL
+export PROJECT_ID=$(gcloud config get-value project)
+echo "Frontend URL: https://storage.googleapis.com/agora-frontend-${PROJECT_ID}/index.html"
+
+# Test backend health
+curl $(gcloud run services describe agora-backend --region=us-central1 --format='value(status.url)')/api/health
+
+# Open frontend in browser
+open "https://storage.googleapis.com/agora-frontend-${PROJECT_ID}/index.html"
 ```
+
+**Expected Results:**
+- ✅ Cloud Build completes all 7 steps successfully
+- ✅ Backend API responds at `/api/health`
+- ✅ Frontend loads and connects to backend
+- ✅ Both backend and frontend update on every push to main
 
 ---
 
@@ -612,12 +640,13 @@ curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
 ## Next Steps
 
 1. ✅ Deploy backend to Cloud Run
-2. ⏳ Build frontend UI (Phase 2)
-3. ⏳ Deploy frontend to Cloud Storage
-4. ⏳ Set up custom domain
-5. ⏳ Add monitoring alerts
-6. ⏳ Implement response caching
-7. ⏳ Add usage analytics
+2. ✅ Build frontend UI
+3. ✅ Deploy frontend to Cloud Storage (automated via Cloud Build)
+4. ✅ Implement streaming responses
+5. ✅ Add response caching
+6. ✅ Add usage analytics
+7. ⏳ Set up custom domain
+8. ⏳ Add monitoring alerts
 
 ---
 
