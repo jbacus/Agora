@@ -1,10 +1,13 @@
 """
 API routes for the Virtual Debate Panel.
 """
+import asyncio
+import json
 import time
 from typing import Dict
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from loguru import logger
 
 from src.data.models import Query
@@ -248,5 +251,74 @@ def create_router(services: Dict) -> APIRouter:
                 status_code=500,
                 detail="Failed to get author rankings"
             )
+
+    @router.post("/query/stream")
+    async def query_stream(request: QueryRequest):
+        """
+        Stream author responses using Server-Sent Events.
+
+        Returns responses incrementally as each author completes,
+        providing a better user experience.
+        """
+        async def generate():
+            try:
+                # Create Query object
+                query = Query(
+                    text=request.text,
+                    specified_authors=request.specified_authors,
+                    max_authors=request.max_authors,
+                    min_authors=request.min_authors,
+                    relevance_threshold=request.relevance_threshold
+                )
+
+                # Get services
+                semantic_router = services["semantic_router"]
+                rag_pipeline = services["rag_pipeline"]
+                authors_dict = services["authors"]
+
+                # Step 1: Select authors
+                logger.info(f"Selecting authors for query (streaming): {query.text[:50]}...")
+                selection_result = semantic_router.select_authors(query)
+
+                if not selection_result.selected_authors:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'No relevant authors found'})}\n\n"
+                    return
+
+                # Send selected authors
+                selected_author_objs = [
+                    authors_dict[author_id]
+                    for author_id in selection_result.selected_authors
+                    if author_id in authors_dict
+                ]
+
+                yield f"data: {json.dumps({'type': 'authors', 'authors': [{'id': a.id, 'name': a.name} for a in selected_author_objs]})}\n\n"
+
+                # Step 2: Generate responses concurrently and stream
+                tasks = []
+                for author in selected_author_objs:
+                    task = rag_pipeline.generate_response(
+                        author=author,
+                        query=query,
+                        query_embedding=selection_result.query_vector
+                    )
+                    tasks.append((author, task))
+
+                # Stream responses as they complete
+                for coro in asyncio.as_completed([task for _, task in tasks]):
+                    response = await coro
+
+                    # Find which author this response is for
+                    author_name = response.author_name
+
+                    yield f"data: {json.dumps({'type': 'response', 'author_id': response.author_id, 'author_name': author_name, 'response': response.response_text, 'relevance': response.relevance_score})}\n\n"
+
+                # Send completion signal
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error in streaming: {e}", exc_info=True)
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
     return router
