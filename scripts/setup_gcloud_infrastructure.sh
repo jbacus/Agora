@@ -62,6 +62,11 @@ echo ""
 echo "🔧 Enabling required Google Cloud APIs..."
 echo "This may take a few minutes..."
 
+# Enable IAM/Service Account API first (required for service accounts)
+echo "📋 Enabling IAM and Service Account APIs..."
+gcloud services enable iam.googleapis.com serviceusage.googleapis.com
+
+# Enable other required APIs
 gcloud services enable \
     cloudbuild.googleapis.com \
     run.googleapis.com \
@@ -70,7 +75,13 @@ gcloud services enable \
     secretmanager.googleapis.com \
     cloudresourcemanager.googleapis.com
 
-echo "✅ APIs enabled"
+echo "✅ All APIs enabled"
+echo ""
+
+# Wait for API propagation
+echo "⏳ Waiting for APIs to propagate (30 seconds)..."
+sleep 30
+echo "✅ APIs ready"
 echo ""
 
 # ============================================
