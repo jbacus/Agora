@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     pinecone_index_name: str = Field(default="virtual-debate-panel", description="Pinecone index name")
 
     # Embedding Configuration
-    embedding_model: str = Field(default="text-embedding-004", description="Embedding model name")
+    embedding_model: str = Field(default="models/text-embedding-004", description="Embedding model name")
     embedding_dimension: int = Field(default=768, description="Embedding vector dimension")
 
     # Semantic Router Configuration
