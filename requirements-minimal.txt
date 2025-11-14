@@ -3,18 +3,22 @@
 # Compatible with ARM Macs (Apple Silicon)
 
 # Core utilities
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
 loguru>=0.7.2
 rich>=13.7.0
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 
-# Vector Database - using client-only version (no onnxruntime dependency)
-# Note: This is sufficient for most use cases and works on ARM Macs
-chromadb-client>=0.5.0
+# Vector Database - full version required for persistent storage
+# Note: Works on Python 3.13 and ARM Macs
+chromadb>=0.4.22
 
-# Embeddings
+# Embeddings & Text Processing
 sentence-transformers>=2.3.1
+tiktoken>=0.5.2  # Required for text chunking
 numpy>=1.26.3
+scipy>=1.12.0
 
 # Data Processing
 pandas>=2.1.4

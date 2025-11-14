@@ -40,8 +40,8 @@ env/
 .env.*.local
 
 # Data directories (contain large text files and vector DB)
-data/
-chroma_db/
+/data/
+/chroma_db/
 *.db
 *.sqlite
 *.sqlite3

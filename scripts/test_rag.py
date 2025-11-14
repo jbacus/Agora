@@ -18,7 +18,7 @@ sys.path.insert(0, '.')
 
 from config.settings import settings
 from src.data import get_embedding_provider, get_vector_db
-from src.data.models import Author
+from src.data.models import Author, Query
 from src.processing import get_llm_client, RAGPipeline
 from src.routing import SemanticRouter
 
@@ -65,14 +65,18 @@ async def test_query(
 
     start_time = time.time()
 
+    # Create Query object
+    query_obj = Query(text=query, specified_authors=None)
+
     # Select authors
-    selected_authors = await semantic_router.select_authors(query)
+    selection_result = semantic_router.select_authors(query_obj)
     selection_time = time.time() - start_time
 
     # Generate response from first author
-    if selected_authors:
+    if selection_result.selected_authors:
         response_start = time.time()
-        response = await rag_pipeline.generate_response(selected_authors[0], query)
+        first_author_id = selection_result.selected_authors[0]
+        response = await rag_pipeline.generate_response(first_author_id, query)
         response_time = time.time() - response_start
     else:
         response = None
@@ -83,13 +87,12 @@ async def test_query(
     # Check if expected author was selected
     correct_selection = None
     if expected_author:
-        selected_ids = [a.id for a in selected_authors]
-        correct_selection = expected_author in selected_ids
+        correct_selection = expected_author in selection_result.selected_authors
 
     return {
         'query': query,
         'expected_author': expected_author,
-        'selected_authors': selected_authors,
+        'selection_result': selection_result,
         'correct_selection': correct_selection,
         'response': response,
         'timing': {
@@ -160,9 +163,11 @@ async def run_tests():
                 all_results.append(result)
 
                 # Display selected authors
-                if result['selected_authors']:
-                    author_names = [f"{a.name} ({a.id})" for a in result['selected_authors']]
-                    console.print(f"[yellow]Selected:[/yellow] {', '.join(author_names)}")
+                if result['selection_result'].selected_authors:
+                    author_ids = result['selection_result'].selected_authors
+                    scores = result['selection_result'].similarity_scores
+                    author_info = [f"{aid} ({scores.get(aid, 0):.2f})" for aid in author_ids]
+                    console.print(f"[yellow]Selected:[/yellow] {', '.join(author_info)}")
 
                     # Check correctness
                     if expected_author:
@@ -225,7 +230,7 @@ async def run_tests():
     for result in all_results:
         query_short = result['query'][:40] + "..." if len(result['query']) > 40 else result['query']
         expected = result['expected_author'] or "-"
-        selected = ", ".join([a.id for a in result['selected_authors']]) if result['selected_authors'] else "None"
+        selected = ", ".join(result['selection_result'].selected_authors) if result['selection_result'].selected_authors else "None"
 
         if result['correct_selection'] is True:
             check = "✓"
