@@ -1,0 +1,23 @@
+# Minimal Requirements for Data Ingestion
+# Use this if you only want to run data ingestion scripts
+
+# Core utilities
+loguru>=0.7.2
+rich>=13.7.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# Vector Database (choose one)
+chromadb>=0.4.22
+
+# Embeddings
+sentence-transformers>=2.3.1
+numpy>=1.26.3
+
+# Data Processing
+pandas>=2.1.4
+
+# LLM Provider (choose one based on your .env)
+google-generativeai>=0.3.2  # For Gemini
+# openai>=1.10.0  # For OpenAI
+# anthropic>=0.8.1  # For Anthropic
