@@ -1,5 +1,6 @@
 # Minimal Requirements for Data Ingestion
 # Use this if you only want to run data ingestion scripts
+# Compatible with ARM Macs (Apple Silicon)
 
 # Core utilities
 loguru>=0.7.2
@@ -7,8 +8,9 @@ rich>=13.7.0
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 
-# Vector Database (choose one)
-chromadb>=0.4.22
+# Vector Database - using client-only version (no onnxruntime dependency)
+# Note: This is sufficient for most use cases and works on ARM Macs
+chromadb-client>=0.5.0
 
 # Embeddings
 sentence-transformers>=2.3.1
@@ -21,3 +23,6 @@ pandas>=2.1.4
 google-generativeai>=0.3.2  # For Gemini
 # openai>=1.10.0  # For OpenAI
 # anthropic>=0.8.1  # For Anthropic
+
+# Google Secret Manager (optional - for production)
+google-cloud-secret-manager>=2.16.0

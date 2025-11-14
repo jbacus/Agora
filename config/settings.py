@@ -1,11 +1,18 @@
 """
 Application configuration using pydantic-settings.
-Loads configuration from environment variables and .env file.
+Loads configuration from environment variables, .env file, or Google Secret Manager.
+
+Priority for API keys:
+1. Google Secret Manager (if GCP_PROJECT_ID is set)
+2. Environment variables
+3. .env file
 """
+import os
 from typing import List, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from loguru import logger
 
 
 class Settings(BaseSettings):
@@ -16,6 +23,16 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
+    )
+
+    # Google Cloud Configuration
+    gcp_project_id: Optional[str] = Field(
+        default=None,
+        description="GCP project ID for Secret Manager (auto-detected in Cloud Run)"
+    )
+    use_secret_manager: bool = Field(
+        default=True,
+        description="Use Google Secret Manager for API keys (falls back to env vars)"
     )
 
     # LLM Configuration
@@ -92,24 +109,52 @@ class Settings(BaseSettings):
         """Parse CORS origins from comma-separated string."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
+    def _get_api_key(self, key_name: str, env_value: Optional[str]) -> Optional[str]:
+        """
+        Get API key from Secret Manager or environment variable.
+
+        Args:
+            key_name: Name of the secret in Secret Manager
+            env_value: Value from environment variable/pydantic field
+
+        Returns:
+            API key value
+        """
+        # If use_secret_manager is enabled and we have a project ID
+        if self.use_secret_manager and (self.gcp_project_id or os.getenv("GOOGLE_CLOUD_PROJECT")):
+            try:
+                from src.utils.secrets import get_secret
+                project_id = self.gcp_project_id or os.getenv("GOOGLE_CLOUD_PROJECT")
+                secret_value = get_secret(key_name, project_id=project_id)
+                if secret_value:
+                    return secret_value
+            except Exception as e:
+                logger.debug(f"Secret Manager lookup failed for {key_name}, using env var: {e}")
+
+        # Fall back to environment variable
+        return env_value
+
     def get_llm_config(self) -> dict:
         """Get LLM configuration based on provider."""
         if self.llm_provider == "gemini":
+            api_key = self._get_api_key("GEMINI_API_KEY", self.gemini_api_key)
             return {
                 "provider": "gemini",
-                "api_key": self.gemini_api_key,
+                "api_key": api_key,
                 "model": self.gemini_model
             }
         elif self.llm_provider == "openai":
+            api_key = self._get_api_key("OPENAI_API_KEY", self.openai_api_key)
             return {
                 "provider": "openai",
-                "api_key": self.openai_api_key,
+                "api_key": api_key,
                 "model": self.openai_model
             }
         elif self.llm_provider == "anthropic":
+            api_key = self._get_api_key("ANTHROPIC_API_KEY", self.anthropic_api_key)
             return {
                 "provider": "anthropic",
-                "api_key": self.anthropic_api_key,
+                "api_key": api_key,
                 "model": self.anthropic_model
             }
         else:
@@ -123,9 +168,10 @@ class Settings(BaseSettings):
                 "persist_directory": self.chroma_persist_dir
             }
         elif self.vector_db == "pinecone":
+            api_key = self._get_api_key("PINECONE_API_KEY", self.pinecone_api_key)
             return {
                 "db_type": "pinecone",
-                "api_key": self.pinecone_api_key,
+                "api_key": api_key,
                 "environment": self.pinecone_environment,
                 "index_name": self.pinecone_index_name
             }
@@ -135,15 +181,17 @@ class Settings(BaseSettings):
     def get_embedding_config(self) -> dict:
         """Get embedding configuration based on LLM provider."""
         if self.llm_provider == "gemini":
+            api_key = self._get_api_key("GEMINI_API_KEY", self.gemini_api_key)
             return {
                 "provider": "gemini",
-                "api_key": self.gemini_api_key,
+                "api_key": api_key,
                 "model": self.embedding_model
             }
         elif self.llm_provider == "openai":
+            api_key = self._get_api_key("OPENAI_API_KEY", self.openai_api_key)
             return {
                 "provider": "openai",
-                "api_key": self.openai_api_key,
+                "api_key": api_key,
                 "model": self.embedding_model
             }
         else:
