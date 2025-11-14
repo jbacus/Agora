@@ -174,7 +174,7 @@ def main():
     logger.info("")
 
     # Clean all authors
-    authors = ['marx', 'whitman', 'manson']
+    authors = ['marx', 'whitman', 'baudelaire']
     data_dir = Path('data/raw')
 
     if not data_dir.exists():

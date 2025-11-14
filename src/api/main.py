@@ -25,7 +25,7 @@ services: Dict = {}
 def load_authors_from_config() -> Dict[str, Author]:
     """Load author profiles from YAML config files."""
     authors = {}
-    author_files = ["marx", "whitman", "manson"]
+    author_files = ["marx", "whitman", "baudelaire"]
 
     for author_id in author_files:
         try:

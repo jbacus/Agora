@@ -50,7 +50,7 @@ def create_expertise_profiles():
     console.print("[green]✓ Services initialized[/green]\n")
 
     # Load author configs
-    author_files = ["marx", "whitman", "manson"]
+    author_files = ["marx", "whitman", "baudelaire"]
     authors = []
 
     for author_id in author_files:

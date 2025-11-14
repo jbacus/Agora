@@ -10,7 +10,7 @@ from .llm_client import (
     get_llm_client,
 )
 from .prompts import (
-    MANSON_PROMPT,
+    BAUDELAIRE_PROMPT,
     MARX_PROMPT,
     WHITMAN_PROMPT,
     PromptManager,
@@ -30,5 +30,5 @@ __all__ = [
     "PromptManager",
     "MARX_PROMPT",
     "WHITMAN_PROMPT",
-    "MANSON_PROMPT",
+    "BAUDELAIRE_PROMPT",
 ]

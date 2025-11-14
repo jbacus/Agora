@@ -127,7 +127,7 @@ virtual-debate-panel/
 │   ├── authors/                 # Author profiles & prompts
 │   │   ├── marx.yaml
 │   │   ├── whitman.yaml
-│   │   └── manson.yaml
+│   │   └── baudelaire.yaml
 │   └── settings.py             # Application configuration
 ├── scripts/
 │   ├── init_database.py        # Database initialization
@@ -164,7 +164,7 @@ virtual-debate-panel/
 
 ### Phase 2: Multi-Author Router
 
-- [ ] P2.1: Create expertise profiles (Marx, Whitman, Manson)
+- [ ] P2.1: Create expertise profiles (Marx, Whitman, Baudelaire)
 - [ ] P2.2: Implement semantic router
 - [ ] P2.3: Update UI for automatic author selection
 
@@ -244,7 +244,7 @@ data/raw/
 │   └── grundrisse.txt
 ├── whitman/
 │   └── leaves_of_grass.txt
-└── manson/
+└── baudelaire/
     └── subtle_art.txt
 ```
 

@@ -75,7 +75,7 @@ function displayResponses(responses) {
 }
 
 function getAuthorEmoji(authorId) {
-    return { 'marx': '🔨', 'whitman': '🌿', 'manson': '💪' }[authorId] || '📚';
+    return { 'marx': '🔨', 'whitman': '🌿', 'baudelaire': '💪' }[authorId] || '📚';
 }
 
 function formatResponse(text) {
