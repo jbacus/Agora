@@ -10,9 +10,9 @@ rich>=13.7.0
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 
-# Vector Database - using client-only version (no onnxruntime dependency)
-# Note: This is sufficient for most use cases and works on ARM Macs
-chromadb-client>=0.5.0
+# Vector Database - full version required for persistent storage
+# Note: Works on Python 3.13 and ARM Macs
+chromadb>=0.4.22
 
 # Embeddings & Text Processing
 sentence-transformers>=2.3.1
