@@ -35,8 +35,8 @@ python scripts/init_database.py
 python scripts/ingest_author.py --author marx
 python scripts/ingest_author.py --author whitman
 
-# If you have Manson content:
-python scripts/ingest_author.py --author manson
+# If you have Baudelaire content:
+python scripts/ingest_author.py --author baudelaire
 
 # Generate expertise profiles
 python scripts/create_expertise_profiles.py

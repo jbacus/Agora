@@ -181,7 +181,7 @@ def create_router(services: Dict) -> APIRouter:
         Get detailed information about a specific author.
 
         Args:
-            author_id: Author identifier (e.g., 'marx', 'whitman', 'manson')
+            author_id: Author identifier (e.g., 'marx', 'whitman', 'baudelaire')
         """
         try:
             authors_dict = services["authors"]

@@ -272,9 +272,9 @@ async def generate_responses_concurrent(
    ├─ Query vector: [0.23, -0.15, 0.42, ...]
    ├─ Marx similarity: 0.45 (below threshold)
    ├─ Whitman similarity: 0.78 (above threshold)
-   └─ Manson similarity: 0.82 (above threshold)
+   └─ Baudelaire similarity: 0.82 (above threshold)
 
-   Selected: [Whitman, Manson] (threshold method)
+   Selected: [Whitman, Baudelaire] (threshold method)
 
 4. RAG Pipeline generates responses concurrently
 
@@ -284,10 +284,10 @@ async def generate_responses_concurrent(
    ├─ Call LLM with Whitman system prompt
    └─ Response: "Life is the grand song of existence..."
 
-   For Manson:
+   For Baudelaire:
    ├─ Retrieve top-5 chunks from "Subtle Art"
    ├─ Construct context
-   ├─ Call LLM with Manson system prompt
+   ├─ Call LLM with Baudelaire system prompt
    └─ Response: "Look, the meaning of life is whatever..."
 
 5. ResponseAggregator formats results

@@ -92,8 +92,8 @@ Content-Type: application/json
       "generation_time_ms": 2341.5
     },
     {
-      "author_id": "manson",
-      "author_name": "Mark Manson",
+      "author_id": "baudelaire",
+      "author_name": "Mark Baudelaire",
       "response_text": "Look, the whole 'meaning of life' question is kind of bullshit. You're asking the wrong question...\n\nThe meaning of life is whatever values you choose to give a fuck about. That's it. No cosmic purpose handed down from above...\n\nStop seeking some universal answer and start taking responsibility for creating your own meaning through the struggles you choose to endure.",
       "relevance_score": 0.78,
       "generation_time_ms": 2156.3
@@ -197,15 +197,15 @@ GET /api/authors
       ]
     },
     {
-      "id": "manson",
-      "name": "Mark Manson",
+      "id": "baudelaire",
+      "name": "Mark Baudelaire",
       "expertise_domains": [
         "psychology",
         "self_help",
         "personal_development",
         "values"
       ],
-      "bio": "Mark Manson is a contemporary American author and blogger...",
+      "bio": "Mark Baudelaire is a contemporary American author and blogger...",
       "major_works": [
         "The Subtle Art of Not Giving a F*ck (2016)",
         "Everything Is F*cked (2019)"
@@ -228,7 +228,7 @@ GET /api/authors/{author_id}
 ```
 
 **Path Parameters**:
-- `author_id`: Author identifier (e.g., "marx", "whitman", "manson")
+- `author_id`: Author identifier (e.g., "marx", "whitman", "baudelaire")
 
 **Response** (200 OK):
 ```json
@@ -287,7 +287,7 @@ GET /api/rankings?query=What%20is%20capitalism
       "similarity_score": 0.89
     },
     {
-      "author_id": "manson",
+      "author_id": "baudelaire",
       "similarity_score": 0.42
     },
     {

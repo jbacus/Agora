@@ -40,7 +40,7 @@ TEST_QUERIES = {
         "What is the relationship between nature and humanity?",
         "How does poetry connect us to the divine?",
     ],
-    'manson': [
+    'baudelaire': [
         "How do I stop caring what others think?",
         "What makes a good life?",
         "How should I deal with failure and setbacks?",
@@ -285,7 +285,7 @@ def main():
         console.print("  2. python scripts/clean_texts.py")
         console.print("  3. python scripts/ingest_author.py --author marx")
         console.print("  4. python scripts/ingest_author.py --author whitman")
-        console.print("  5. python scripts/ingest_author.py --author manson")
+        console.print("  5. python scripts/ingest_author.py --author baudelaire")
         console.print()
         return 1
 

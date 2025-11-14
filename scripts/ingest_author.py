@@ -193,7 +193,7 @@ def main():
     parser.add_argument(
         "--author",
         required=True,
-        help="Author ID (e.g., 'marx', 'whitman', 'manson')"
+        help="Author ID (e.g., 'marx', 'whitman', 'baudelaire')"
     )
     parser.add_argument(
         "--input",

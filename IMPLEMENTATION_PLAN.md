@@ -6,7 +6,7 @@ This document outlines the complete implementation plan for building and deployi
 
 **Timeline:** 4-6 weeks (part-time) | 2-3 weeks (full-time)
 
-**Goal:** A fully functional multi-author debate panel with Marx, Whitman, and Manson responding to user queries using RAG.
+**Goal:** A fully functional multi-author debate panel with Marx, Whitman, and Baudelaire responding to user queries using RAG.
 
 ---
 
@@ -86,37 +86,28 @@ wget https://www.gutenberg.org/files/8813/8813-0.txt -O data/raw/whitman/democra
 wget https://www.gutenberg.org/files/8892/8892-0.txt -O data/raw/whitman/specimen_days.txt
 ```
 
-#### Manson Texts (Copyright Protected - Purchase Required)
-- [ ] Purchase or obtain legally:
-  - "The Subtle Art of Not Giving a F*ck" (primary)
-  - "Everything Is F*cked: A Book About Hope" (optional)
-- [ ] Convert to plain text (use OCR if needed)
-- [ ] Save to `data/raw/manson/`
-
-**Note:** Since Manson's books are under copyright, you must:
-1. Purchase the books legally
-2. Extract text for personal use only (fair use for education/research)
-3. Do NOT distribute the text files
-4. Consider using book summaries or excerpts if full text unavailable
-
-**Alternative for Manson:**
-- Use Mark Manson's blog posts (available freely online)
-- Archive from https://markmanson.net/archive
-- Use web scraping to collect article text
+#### Baudelaire Texts (Public Domain - Free)
+- [ ] Download from Project Gutenberg
+  - The Flowers of Evil: https://www.gutenberg.org/ebooks/36098
+  - Paris Spleen: https://www.gutenberg.org/ebooks/57346
+- [ ] Convert to plain text
+- [ ] Save to `data/raw/baudelaire/`
 
 **Commands:**
 ```bash
-mkdir -p data/raw/manson
+mkdir -p data/raw/baudelaire
 
-# If using blog posts instead:
-# Manually save top 20-30 articles as .txt files
-# Focus on philosophy, psychology, self-improvement topics
+# The Flowers of Evil (English translation)
+wget https://www.gutenberg.org/files/36098/36098-0.txt -O data/raw/baudelaire/flowers_of_evil.txt
+
+# Paris Spleen (English translation)
+wget https://www.gutenberg.org/files/57346/57346-0.txt -O data/raw/baudelaire/paris_spleen.txt
 ```
 
 **Deliverables:**
-- `data/raw/marx/` contains 3-4 text files (~500KB total)
+- `data/raw/marx/` contains 3 text files (~500KB total)
 - `data/raw/whitman/` contains 3 text files (~400KB total)
-- `data/raw/manson/` contains text files or blog posts (~200KB total)
+- `data/raw/baudelaire/` contains 2 text files (~300KB total)
 
 **Time:** 2-3 hours
 
@@ -157,7 +148,7 @@ def clean_author_texts(author_dir: Path):
         txt_file.write_text(cleaned, encoding='utf-8')
 
 if __name__ == '__main__':
-    for author in ['marx', 'whitman', 'manson']:
+    for author in ['marx', 'whitman', 'baudelaire']:
         author_dir = Path(f'data/raw/{author}')
         if author_dir.exists():
             clean_author_texts(author_dir)
@@ -199,7 +190,7 @@ python scripts/init_database.py
 # 3. Ingest each author
 python scripts/ingest_author.py --author marx
 python scripts/ingest_author.py --author whitman
-python scripts/ingest_author.py --author manson
+python scripts/ingest_author.py --author baudelaire
 
 # 4. Generate expertise profiles
 python scripts/create_expertise_profiles.py
@@ -213,7 +204,7 @@ db = get_vector_db(**settings.get_vector_db_config())
 db.initialize()
 
 # Check chunk counts
-for author in ['marx', 'whitman', 'manson']:
+for author in ['marx', 'whitman', 'baudelaire']:
     collection = db.client.get_collection(f'author_{author}')
     count = collection.count()
     print(f'{author}: {count} chunks')
@@ -224,7 +215,7 @@ for author in ['marx', 'whitman', 'manson']:
 ```
 marx: ~1200 chunks
 whitman: ~900 chunks
-manson: ~500 chunks (or more if using blog posts)
+baudelaire: ~500 chunks (or more if using blog posts)
 ```
 
 **Deliverables:**
@@ -266,7 +257,7 @@ async def test_queries():
         "What is the meaning of democracy?",
         "How should we celebrate the individual?",
 
-        # Should route to Manson
+        # Should route to Baudelaire
         "How do I stop caring what others think?",
         "What makes a good life?",
 
@@ -309,7 +300,7 @@ python scripts/test_rag.py
 **Success Criteria:**
 - Marx responds to questions about capitalism, class struggle
 - Whitman responds to questions about democracy, individualism
-- Manson responds to questions about personal growth, psychology
+- Baudelaire responds to questions about personal growth, psychology
 - Multi-author queries select relevant authors (threshold-based)
 - Responses are coherent and relevant (3 paragraphs max)
 
@@ -429,7 +420,7 @@ python scripts/test_rag.py
     @apply border-blue-500;
 }
 
-.author-card.manson {
+.author-card.baudelaire {
     @apply border-purple-500;
 }
 ```
@@ -554,7 +545,7 @@ function getAuthorEmoji(authorId) {
     const emojis = {
         'marx': '🔨',
         'whitman': '🌿',
-        'manson': '💪'
+        'baudelaire': '💪'
     };
     return emojis[authorId] || '📚';
 }
@@ -877,7 +868,7 @@ panel:
 authors:
   - marx
   - whitman
-  - manson
+  - baudelaire
 
 ui:
   title: "Modern Thinkers Panel"
@@ -1346,7 +1337,7 @@ if __name__ == '__main__':
 
 ### Phase 1: Data (Week 1)
 - [x] Infrastructure setup
-- [ ] Acquire texts (Marx, Whitman, Manson)
+- [ ] Acquire texts (Marx, Whitman, Baudelaire)
 - [ ] Clean and prepare data
 - [ ] Ingest into vector database
 - [ ] Test RAG pipeline
@@ -1415,7 +1406,7 @@ if __name__ == '__main__':
 
 ### One-Time Costs
 - Domain (optional): $12/year
-- Text acquisition: $0-30 (Manson books)
+- Text acquisition: $0-30 (Baudelaire books)
 
 ---
 
@@ -1424,7 +1415,7 @@ if __name__ == '__main__':
 **Start with Phase 1:**
 ```bash
 # 1. Acquire texts
-mkdir -p data/raw/{marx,whitman,manson}
+mkdir -p data/raw/{marx,whitman,baudelaire}
 wget https://www.gutenberg.org/files/61/61-0.txt -O data/raw/marx/capital_vol1.txt
 
 # 2. Set up environment

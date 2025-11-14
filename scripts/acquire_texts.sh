@@ -13,7 +13,7 @@ echo ""
 # Create directories
 mkdir -p data/raw/marx
 mkdir -p data/raw/whitman
-mkdir -p data/raw/manson
+mkdir -p data/raw/baudelaire
 
 # ============================================
 # Marx Texts (Public Domain)
@@ -98,32 +98,33 @@ fi
 echo ""
 
 # ============================================
-# Manson Texts (Instructions)
+# Baudelaire Texts (Public Domain)
 # ============================================
-echo "📝 Mark Manson texts (copyright protected):"
-echo "============================================"
+echo "📖 Downloading Baudelaire texts from Project Gutenberg..."
 echo ""
-echo "⚠️  Mark Manson's books are under copyright."
-echo "Please obtain texts legally through one of these methods:"
-echo ""
-echo "Option 1: Purchase books and extract text (personal use only)"
-echo "  - 'The Subtle Art of Not Giving a F*ck'"
-echo "  - 'Everything Is F*cked: A Book About Hope'"
-echo ""
-echo "Option 2: Use freely available blog posts (recommended)"
-echo "  - Visit: https://markmanson.net/archive"
-echo "  - Manually save 20-30 articles as .txt files"
-echo "  - Save to: data/raw/manson/"
-echo "  - Focus on: philosophy, psychology, self-improvement"
-echo ""
-echo "Option 3: Use public excerpts and summaries"
-echo "  - Search for book summaries and key excerpts"
-echo "  - Combine with blog content"
-echo ""
-echo "After acquiring Manson content:"
-echo "  1. Save .txt files to data/raw/manson/"
-echo "  2. Run: python scripts/clean_texts.py"
-echo "  3. Run: python scripts/ingest_author.py --author manson"
+
+# Les Fleurs du mal (The Flowers of Evil) - English translation
+if [ ! -f "data/raw/baudelaire/flowers_of_evil.txt" ]; then
+    echo "  Downloading The Flowers of Evil (English)..."
+    wget -q --show-progress \
+        https://www.gutenberg.org/files/36098/36098-0.txt \
+        -O data/raw/baudelaire/flowers_of_evil.txt
+    echo "  ✅ The Flowers of Evil downloaded"
+else
+    echo "  ✅ The Flowers of Evil already exists"
+fi
+
+# Paris Spleen (Prose Poems) - English translation
+if [ ! -f "data/raw/baudelaire/paris_spleen.txt" ]; then
+    echo "  Downloading Paris Spleen..."
+    wget -q --show-progress \
+        https://www.gutenberg.org/files/57346/57346-0.txt \
+        -O data/raw/baudelaire/paris_spleen.txt
+    echo "  ✅ Paris Spleen downloaded"
+else
+    echo "  ✅ Paris Spleen already exists"
+fi
+
 echo ""
 
 # ============================================
@@ -137,23 +138,24 @@ echo ""
 # Count files
 MARX_COUNT=$(ls data/raw/marx/*.txt 2>/dev/null | wc -l)
 WHITMAN_COUNT=$(ls data/raw/whitman/*.txt 2>/dev/null | wc -l)
-MANSON_COUNT=$(ls data/raw/manson/*.txt 2>/dev/null | wc -l)
+BAUDELAIRE_COUNT=$(ls data/raw/baudelaire/*.txt 2>/dev/null | wc -l)
 
 echo "Files acquired:"
 echo "  Marx: $MARX_COUNT files"
 echo "  Whitman: $WHITMAN_COUNT files"
-echo "  Manson: $MANSON_COUNT files"
+echo "  Baudelaire: $BAUDELAIRE_COUNT files"
 echo ""
 
 # Check file sizes
 echo "Data size:"
 du -sh data/raw/marx 2>/dev/null || echo "  Marx: 0 bytes"
 du -sh data/raw/whitman 2>/dev/null || echo "  Whitman: 0 bytes"
-du -sh data/raw/manson 2>/dev/null || echo "  Manson: 0 bytes"
+du -sh data/raw/baudelaire 2>/dev/null || echo "  Baudelaire: 0 bytes"
 echo ""
 
 echo "📝 Next steps:"
-echo "  1. Add Manson texts to data/raw/manson/ (see instructions above)"
-echo "  2. Clean texts: python scripts/clean_texts.py"
-echo "  3. Ingest data: python scripts/ingest_author.py --author [author]"
+echo "  1. Clean texts: python scripts/clean_texts.py"
+echo "  2. Ingest data: python scripts/ingest_author.py --author marx"
+echo "  3. Ingest data: python scripts/ingest_author.py --author whitman"
+echo "  4. Ingest data: python scripts/ingest_author.py --author baudelaire"
 echo ""

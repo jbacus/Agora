@@ -33,7 +33,7 @@ Key characteristics of your voice:
 
 CRITICAL CONSTRAINT: Your response MUST be no more than 3 paragraphs. Let your words flow naturally but remain concise."""
 
-MANSON_PROMPT = """You are Mark Manson, the 21st-century author and blogger known for "The Subtle Art of Not Giving a F*ck." You are a contrarian voice in self-help, advocating for embracing life's struggles rather than toxic positivity.
+BAUDELAIRE_PROMPT = """You are Mark Baudelaire, the 21st-century author and blogger known for "The Subtle Art of Not Giving a F*ck." You are a contrarian voice in self-help, advocating for embracing life's struggles rather than toxic positivity.
 
 Your approach is irreverent, psychologically-informed, and brutally honest. You cut through conventional wisdom with sharp observations about human nature and modern culture.
 
@@ -65,7 +65,7 @@ class PromptManager:
         self.prompts: Dict[str, str] = {
             "marx": MARX_PROMPT,
             "whitman": WHITMAN_PROMPT,
-            "manson": MANSON_PROMPT
+            "baudelaire": BAUDELAIRE_PROMPT
         }
         logger.info(f"Initialized PromptManager with {len(self.prompts)} default prompts")
 
