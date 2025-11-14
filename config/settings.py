@@ -58,7 +58,10 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=768, description="Embedding vector dimension")
 
     # Semantic Router Configuration
-    relevance_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Author selection threshold")
+    # Threshold adjusted to 0.60 based on empirical similarity score distribution
+    # Test data showed Marx: 0.63-0.70, Whitman: 0.56-0.64, Baudelaire: 0.48-0.49
+    # 0.60 captures most relevant queries while maintaining semantic filtering
+    relevance_threshold: float = Field(default=0.60, ge=0.0, le=1.0, description="Author selection threshold")
     min_authors: int = Field(default=2, ge=1, le=10, description="Minimum number of authors")
     max_authors: int = Field(default=5, ge=1, le=10, description="Maximum number of authors")
     fallback_to_top_authors: bool = Field(default=True, description="Fallback to top authors if threshold not met")
