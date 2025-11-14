@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
 import chromadb
-from chromadb.config import Settings
 from loguru import logger
 
 try:
@@ -81,11 +80,9 @@ class ChromaVectorDB(VectorDatabase):
 
     def initialize(self) -> None:
         """Initialize ChromaDB client and collections."""
-        self.client = chromadb.Client(
-            Settings(
-                persist_directory=self.persist_directory,
-                anonymized_telemetry=False
-            )
+        # Use PersistentClient for chromadb-client compatibility
+        self.client = chromadb.PersistentClient(
+            path=self.persist_directory
         )
 
         # Get or create collections
