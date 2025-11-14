@@ -146,12 +146,12 @@ def ingest_author(author_id: str, input_dir: Path):
             logger.info(f"{filename}: {len(chunks)} chunks")
 
             # Create TextChunk objects
-            for i, chunk_text in enumerate(chunks):
+            for i, chunk_content in enumerate(chunks):
                 chunk_id = f"{author_id}_{filename}_{i}"
                 text_chunk = TextChunk(
                     id=chunk_id,
                     author_id=author_id,
-                    text=chunk_text,
+                    text=chunk_content,
                     metadata={
                         "book": filename,
                         "chunk_index": i,
