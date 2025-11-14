@@ -6,8 +6,9 @@ Tests the Retrieval-Augmented Generation pipeline with various queries.
 import asyncio
 import sys
 import time
-from typing import List
+from typing import Dict, List
 
+import yaml
 from loguru import logger
 from rich.console import Console
 from rich.table import Table
@@ -18,12 +19,38 @@ sys.path.insert(0, '.')
 
 from config.settings import settings
 from src.data import get_embedding_provider, get_vector_db
-from src.data.models import Author, Query
+from src.data.models import Author, Query, VoiceCharacteristics
 from src.processing import get_llm_client, RAGPipeline
 from src.routing import SemanticRouter
 
 
 console = Console()
+
+
+def load_authors_from_config() -> Dict[str, Author]:
+    """Load author profiles from YAML config files."""
+    authors = {}
+    author_files = ["marx", "whitman", "baudelaire"]
+
+    for author_id in author_files:
+        try:
+            with open(f"config/authors/{author_id}.yaml", "r") as f:
+                data = yaml.safe_load(f)
+
+            authors[author_id] = Author(
+                id=author_id,
+                name=data["name"],
+                expertise_domains=data["expertise_domains"],
+                voice_characteristics=VoiceCharacteristics(**data["voice_characteristics"]),
+                system_prompt=data["system_prompt"],
+                bio=data.get("bio"),
+                works=data.get("major_works", [])
+            )
+            logger.info(f"Loaded author: {data['name']}")
+        except Exception as e:
+            logger.error(f"Failed to load author {author_id}: {e}")
+
+    return authors
 
 
 # Test queries categorized by expected author
@@ -59,6 +86,7 @@ async def test_query(
     query: str,
     semantic_router: SemanticRouter,
     rag_pipeline: RAGPipeline,
+    authors: Dict[str, Author],
     expected_author: str = None
 ) -> dict:
     """Test a single query through the RAG pipeline."""
@@ -76,8 +104,24 @@ async def test_query(
     if selection_result.selected_authors:
         response_start = time.time()
         first_author_id = selection_result.selected_authors[0]
-        response = await rag_pipeline.generate_response(first_author_id, query)
-        response_time = time.time() - response_start
+
+        # Get Author object
+        author = authors.get(first_author_id)
+        if not author:
+            logger.error(f"Author not found: {first_author_id}")
+            response = None
+            response_time = 0
+        else:
+            # Use the query embedding from selection (already computed)
+            query_embedding = selection_result.query_vector
+
+            # Generate response using async method
+            response = await rag_pipeline.generate_response_async(
+                query=query_obj,
+                author=author,
+                query_embedding=query_embedding
+            )
+            response_time = time.time() - response_start
     else:
         response = None
         response_time = 0
@@ -114,6 +158,10 @@ async def run_tests():
     console.print("[yellow]Initializing services...[/yellow]")
 
     try:
+        # Load authors
+        authors = load_authors_from_config()
+        console.print(f"[green]✓ Loaded {len(authors)} author profiles[/green]")
+
         vector_db = get_vector_db(**settings.get_vector_db_config())
         vector_db.initialize()
 
@@ -159,7 +207,7 @@ async def run_tests():
             console.print(f"\n[cyan]Q: {query}[/cyan]")
 
             try:
-                result = await test_query(query, semantic_router, rag_pipeline, expected_author)
+                result = await test_query(query, semantic_router, rag_pipeline, authors, expected_author)
                 all_results.append(result)
 
                 # Display selected authors
@@ -182,7 +230,7 @@ async def run_tests():
 
                 # Display response preview
                 if result['response']:
-                    response_preview = result['response'].response[:150] + "..."
+                    response_preview = result['response'].response_text[:150] + "..."
                     console.print(f"[dim]{response_preview}[/dim]")
 
                 # Display timing
