@@ -20,7 +20,10 @@ console = Console()
 
 def create_expertise_text(author_data: dict) -> str:
     """
-    Create a text representation of author's expertise for embedding.
+    Create a semantically rich text representation of author's expertise for embedding.
+
+    This function generates natural language descriptions that embed better than
+    keyword lists, improving semantic routing accuracy.
 
     Args:
         author_data: Author configuration dictionary
@@ -28,14 +31,30 @@ def create_expertise_text(author_data: dict) -> str:
     Returns:
         Expertise text for embedding
     """
-    expertise_text = f"{author_data['name']} is an expert in: "
-    expertise_text += ", ".join(author_data['expertise_domains'])
-    expertise_text += ". "
+    # Start with name and natural language domain description
+    text = f"{author_data['name']} specializes in "
 
+    # Convert underscores to spaces for better embedding
+    domains = [d.replace('_', ' ') for d in author_data['expertise_domains']]
+    text += ", ".join(domains) + ". "
+
+    # Add biographical context
     if 'bio' in author_data:
-        expertise_text += author_data['bio']
+        text += author_data['bio'] + " "
 
-    return expertise_text
+    # Add voice characteristics for richer semantic content
+    voice = author_data.get('voice_characteristics', {})
+    if 'perspective' in voice:
+        text += f"Their perspective is characterized by {voice['perspective']}. "
+    if 'vocabulary' in voice:
+        text += f"Key concepts include: {voice['vocabulary']}. "
+
+    # Add major works for additional context
+    if 'major_works' in author_data and author_data['major_works']:
+        works = ", ".join(author_data['major_works'][:3])  # Top 3 works
+        text += f"Major works: {works}."
+
+    return text
 
 
 def create_expertise_profiles():
