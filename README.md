@@ -323,3 +323,4 @@ For questions or support, please open an issue on GitHub.
 - ✅ Phase 1-2: Data acquisition & frontend
 - ✅ Phase 3-4: Streaming, caching, telemetry
 - ✅ Phase 5-6: Automated deployment & docs
+# Production deployment
