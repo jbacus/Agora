@@ -10,7 +10,7 @@ from typing import List
 import tiktoken
 from loguru import logger
 from rich.console import Console
-from rich.progress import Progress
+from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -118,13 +118,24 @@ def ingest_author(author_id: str, input_dir: Path):
 
     # Process each file
     all_chunks = []
-    with Progress() as progress:
+    console.print("[cyan]Chunking texts...[/cyan]")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeElapsedColumn(),
+        console=console
+    ) as progress:
         task = progress.add_task(
-            f"[cyan]Processing {author_id}...",
+            f"Processing files for {author_id}",
             total=len(files)
         )
 
         for filename, content in files:
+            progress.update(task, description=f"Processing: {filename}")
+
             # Chunk text
             chunks = chunk_text(
                 content,
@@ -157,17 +168,32 @@ def ingest_author(author_id: str, input_dir: Path):
     console.print("[cyan]Generating embeddings...[/cyan]")
     texts = [chunk.text for chunk in all_chunks]
 
-    with Progress() as progress:
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TextColumn("({task.completed}/{task.total})"),
+        TimeElapsedColumn(),
+        console=console
+    ) as progress:
         task = progress.add_task(
-            "[cyan]Embedding...",
+            "Embedding chunks",
             total=len(texts)
         )
 
-        embeddings = embedding_provider.embed_batch(texts)
+        # Process in batches to show progress
+        batch_size = 50
+        embeddings = []
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            batch_embeddings = embedding_provider.embed_batch(batch)
+            embeddings.extend(batch_embeddings)
+            progress.update(task, advance=len(batch))
 
         for chunk, embedding in zip(all_chunks, embeddings):
             chunk.embedding = embedding
-            progress.update(task, advance=1)
 
     console.print(f"[green]✓ Generated {len(embeddings)} embeddings[/green]\n")
 
