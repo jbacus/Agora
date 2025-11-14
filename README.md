@@ -68,25 +68,31 @@ The Virtual Debate Panel uses a Retrieval-Augmented Generation (RAG) pipeline wi
 git clone <repository-url>
 cd virtual-debate-panel
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies using Poetry
+poetry install
 
 # Set up environment variables
 cp .env.example .env
 # Edit .env with your API keys
 
 # Initialize the vector database
-python scripts/init_database.py
+poetry run python scripts/init_database.py
 
 # Run data ingestion (Phase 1: Marx only)
-python scripts/ingest_author.py --author marx --input data/raw/marx/
+poetry run python scripts/ingest_author.py --author marx --input data/raw/marx/
+```
+
+**Alternative: Using pip**
+```bash
+pip install -r requirements.txt
+python scripts/init_database.py
 ```
 
 ### Running the Application
 
 ```bash
-# Start the API server
-uvicorn src.api.main:app --reload --port 8000
+# Start the API server using Poetry
+poetry run uvicorn src.api.main:app --reload --port 8000
 
 # In a separate terminal, start the UI dev server
 cd src/ui

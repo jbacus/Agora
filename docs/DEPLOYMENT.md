@@ -317,8 +317,28 @@ curl http://localhost:8000/api/health
 docker-compose down
 ```
 
-### Using Python Directly
+### Using Python Directly (Poetry)
 
+```bash
+# 1. Install Poetry (if not already installed)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# 2. Install dependencies (Poetry automatically creates virtual environment)
+poetry install
+
+# 3. Set environment variables
+export GEMINI_API_KEY="your-key"
+export LLM_PROVIDER="gemini"
+export VECTOR_DB="chromadb"
+
+# 4. Run the application using Poetry
+poetry run uvicorn src.api.main:app --reload --port 8000
+
+# 5. Open browser
+# http://localhost:8000/docs  (API documentation)
+```
+
+**Alternative: Using pip directly**
 ```bash
 # 1. Create virtual environment
 python3 -m venv venv
@@ -327,16 +347,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set environment variables
-export GEMINI_API_KEY="your-key"
-export LLM_PROVIDER="gemini"
-export VECTOR_DB="chromadb"
-
-# 4. Run the application
+# 3. Run the application
 uvicorn src.api.main:app --reload --port 8000
-
-# 5. Open browser
-# http://localhost:8000/docs  (API documentation)
 ```
 
 ### Local Testing Workflow
