@@ -5,6 +5,7 @@ description = "Multi-perspective chat application with RAG-based author response
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 license = "MIT"
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
