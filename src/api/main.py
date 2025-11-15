@@ -14,6 +14,7 @@ from config.settings import settings
 from src.data import get_embedding_provider, get_vector_db
 from src.data.models import Author, VoiceCharacteristics
 from src.processing import PromptManager, RAGPipeline, get_llm_client
+from src.processing.debate_orchestrator import DebateOrchestrator
 from src.routing import ResponseAggregator, SemanticRouter
 
 from .routes import create_router
@@ -102,6 +103,15 @@ async def lifespan(app: FastAPI):
         )
         services["rag_pipeline"] = rag_pipeline
 
+        # Initialize debate orchestrator
+        debate_orchestrator = DebateOrchestrator(
+            rag_pipeline=rag_pipeline,
+            llm_client=llm_client,
+            max_response_tokens=settings.max_response_tokens,
+            temperature=settings.llm_temperature
+        )
+        services["debate_orchestrator"] = debate_orchestrator
+
         # Initialize response aggregator
         response_aggregator = ResponseAggregator()
         services["response_aggregator"] = response_aggregator
@@ -150,6 +160,7 @@ async def root():
         "description": "Multi-perspective chat application with RAG-based author responses",
         "endpoints": {
             "query": "/api/query",
+            "debate": "/api/query/debate",
             "authors": "/api/authors",
             "health": "/api/health",
             "docs": "/docs"

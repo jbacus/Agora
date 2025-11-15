@@ -132,3 +132,91 @@ class ErrorResponse(BaseModel):
                 "code": "VALIDATION_ERROR"
             }
         }
+
+
+class DebateRequest(BaseModel):
+    """Request schema for debate endpoint."""
+    text: str = Field(..., min_length=1, max_length=5000, description="The user's question")
+    specified_authors: Optional[List[str]] = Field(
+        None,
+        description="Specific author IDs to query (None for automatic selection)"
+    )
+    max_authors: int = Field(5, ge=2, le=10, description="Maximum number of authors")
+    min_authors: int = Field(2, ge=2, le=5, description="Minimum number of authors (must be >= 2)")
+    relevance_threshold: float = Field(
+        0.7, ge=0.0, le=1.0, description="Minimum similarity for author selection"
+    )
+    num_rounds: int = Field(
+        2, ge=1, le=5, description="Number of debate rounds (1 = initial only, 2+ = with rebuttals)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "text": "What is the meaning of life?",
+                "max_authors": 3,
+                "min_authors": 2,
+                "relevance_threshold": 0.7,
+                "num_rounds": 2
+            }
+        }
+
+
+class DebateRoundSchema(BaseModel):
+    """Schema for a single debate round."""
+    round_number: int
+    round_type: str
+    author_responses: List[AuthorResponseSchema]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "round_number": 1,
+                "round_type": "initial",
+                "author_responses": [
+                    {
+                        "author_id": "marx",
+                        "author_name": "Karl Marx",
+                        "response_text": "The meaning lies in the material conditions...",
+                        "relevance_score": 0.85,
+                        "generation_time_ms": 1234.5
+                    }
+                ]
+            }
+        }
+
+
+class DebateResponseSchema(BaseModel):
+    """Schema for complete debate response."""
+    query_text: str
+    rounds: List[DebateRoundSchema]
+    total_time_ms: float
+    selection_method: str
+    author_count: int
+    round_count: int
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "query_text": "What is the meaning of life?",
+                "rounds": [
+                    {
+                        "round_number": 1,
+                        "round_type": "initial",
+                        "author_responses": [
+                            {
+                                "author_id": "marx",
+                                "author_name": "Karl Marx",
+                                "response_text": "The meaning lies in the material conditions...",
+                                "relevance_score": 0.85,
+                                "generation_time_ms": 1234.5
+                            }
+                        ]
+                    }
+                ],
+                "total_time_ms": 7500.0,
+                "selection_method": "threshold",
+                "author_count": 3,
+                "round_count": 2
+            }
+        }

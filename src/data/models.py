@@ -163,3 +163,34 @@ class AuthorSelectionResult(BaseModel):
     )
     query_vector: List[float] = Field(..., description="Embedded query vector")
     threshold_used: float = Field(..., description="Relevance threshold applied")
+
+
+class DebateRound(BaseModel):
+    """A single round in a multi-author debate."""
+    round_number: int = Field(..., description="Round number (1-indexed)")
+    round_type: str = Field(..., description="Type of round (initial, rebuttal, response)")
+    author_responses: List[AuthorResponse] = Field(..., description="Responses in this round")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DebateResponse(BaseModel):
+    """Complete multi-round debate response."""
+    query: Query = Field(..., description="Original user query")
+    rounds: List[DebateRound] = Field(..., description="All debate rounds")
+    total_time_ms: float = Field(..., description="Total time for entire debate")
+    selection_method: str = Field(
+        ..., description="How authors were selected (semantic, specified, fallback)"
+    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    @property
+    def author_count(self) -> int:
+        """Number of authors in the debate."""
+        if not self.rounds:
+            return 0
+        return len(self.rounds[0].author_responses)
+
+    @property
+    def round_count(self) -> int:
+        """Number of rounds in the debate."""
+        return len(self.rounds)

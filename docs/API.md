@@ -152,6 +152,135 @@ Content-Type: application/json
 
 ---
 
+### Multi-Round Author Debate
+
+Start a multi-round debate where authors respond to the original query and then critique each other's responses.
+
+**Request**:
+```
+POST /api/query/debate
+Content-Type: application/json
+
+{
+  "text": "What is the meaning of life?",
+  "specified_authors": null,
+  "max_authors": 3,
+  "min_authors": 2,
+  "relevance_threshold": 0.7,
+  "num_rounds": 2
+}
+```
+
+**Parameters**:
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `text` | string | Yes | - | The user's question (1-5000 characters) |
+| `specified_authors` | string[] | No | null | Specific author IDs to query. If null, uses semantic routing. |
+| `max_authors` | integer | No | 5 | Maximum number of authors to include (2-10) |
+| `min_authors` | integer | No | 2 | Minimum number of authors to include (must be >= 2 for debate) |
+| `relevance_threshold` | float | No | 0.60 | Minimum similarity score for author selection (0.0-1.0) |
+| `num_rounds` | integer | No | 2 | Number of debate rounds (1-5). Round 1 is initial responses, Round 2+ are rebuttals |
+
+**Response** (200 OK):
+```json
+{
+  "query_text": "What is the meaning of life?",
+  "rounds": [
+    {
+      "round_number": 1,
+      "round_type": "initial",
+      "author_responses": [
+        {
+          "author_id": "whitman",
+          "author_name": "Walt Whitman",
+          "response_text": "The meaning of life lies in the democratic embrace of all existence...",
+          "relevance_score": 0.82,
+          "generation_time_ms": 2341.5
+        },
+        {
+          "author_id": "manson",
+          "author_name": "Mark Manson",
+          "response_text": "The whole 'meaning of life' question is kind of bullshit...",
+          "relevance_score": 0.78,
+          "generation_time_ms": 2156.3
+        }
+      ]
+    },
+    {
+      "round_number": 2,
+      "round_type": "rebuttal",
+      "author_responses": [
+        {
+          "author_id": "whitman",
+          "author_name": "Walt Whitman",
+          "response_text": "My friend Manson speaks with the voice of our cynical age, but I must respectfully disagree...",
+          "relevance_score": 1.0,
+          "generation_time_ms": 1987.2
+        },
+        {
+          "author_id": "manson",
+          "author_name": "Mark Manson",
+          "response_text": "Whitman's romantic idealism is beautiful, sure, but it's not practical for most people...",
+          "relevance_score": 1.0,
+          "generation_time_ms": 1823.7
+        }
+      ]
+    }
+  ],
+  "total_time_ms": 8308.7,
+  "selection_method": "threshold",
+  "author_count": 2,
+  "round_count": 2
+}
+```
+
+**Response Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query_text` | string | Original query text |
+| `rounds` | DebateRound[] | Array of debate rounds |
+| `total_time_ms` | float | Total processing time in milliseconds |
+| `selection_method` | string | How authors were selected ("threshold", "fallback_top_k", "specified") |
+| `author_count` | integer | Number of authors in debate |
+| `round_count` | integer | Number of rounds in debate |
+
+**DebateRound Object**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `round_number` | integer | Round number (1-indexed) |
+| `round_type` | string | Type of round ("initial", "rebuttal", "response") |
+| `author_responses` | AuthorResponse[] | Responses from all authors in this round |
+
+**Notes**:
+- Minimum 2 authors required for a debate
+- Round 1 contains initial RAG-based responses to the user's query
+- Round 2+ contain responses where each author critiques or builds upon other authors' previous responses
+- Authors do not use RAG retrieval in debate rounds (Round 2+), only in the initial round
+- All authors are considered 100% relevant after selection (relevance_score = 1.0 in debate rounds)
+
+**Error Responses**:
+
+```json
+// 400 Bad Request - Insufficient authors
+{
+  "error": "Validation error",
+  "detail": "Debate requires at least 2 authors",
+  "code": "INSUFFICIENT_AUTHORS"
+}
+
+// 422 Unprocessable Entity - Invalid parameters
+{
+  "error": "Validation error",
+  "detail": "num_rounds must be between 1 and 5",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+---
+
 ### List Authors
 
 Get all available authors with their profiles.
