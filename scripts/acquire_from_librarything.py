@@ -480,9 +480,20 @@ class LibraryThingParser:
                 # Extract author (prefer "fl" format: "First Last")
                 author = ''
                 if 'authors' in book_data and book_data['authors']:
-                    # Get first author
+                    # Get first author - handle different data structures
                     first_author = book_data['authors'][0]
-                    author = first_author.get('fl', '') or first_author.get('lf', '')
+                    if isinstance(first_author, dict):
+                        # Dictionary format: {"fl": "First Last", "lf": "Last, First"}
+                        author = first_author.get('fl', '') or first_author.get('lf', '')
+                    elif isinstance(first_author, list):
+                        # List format: take first element or join all
+                        author = first_author[0] if first_author else ''
+                    elif isinstance(first_author, str):
+                        # String format: use directly
+                        author = first_author
+                    else:
+                        # Unknown format: convert to string
+                        author = str(first_author)
                 elif 'primaryauthor' in book_data:
                     author = book_data['primaryauthor']
 
