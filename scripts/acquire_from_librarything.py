@@ -432,18 +432,102 @@ class GutenbergSearcher:
 
 
 class LibraryThingParser:
-    """Parses LibraryThing TSV export files"""
+    """Parses LibraryThing export files (both JSON and TSV formats)"""
 
     def parse(self, file_path: Path) -> List[Book]:
         """
-        Parse a LibraryThing TSV export file
+        Parse a LibraryThing export file (auto-detects JSON or TSV format)
 
         Args:
-            file_path: Path to the TSV file
+            file_path: Path to the LibraryThing export file
 
         Returns:
             List of Book objects
         """
+        # Detect format by file extension or content
+        if file_path.suffix.lower() == '.json':
+            return self._parse_json(file_path)
+        elif file_path.suffix.lower() in ['.tsv', '.txt']:
+            return self._parse_tsv(file_path)
+        else:
+            # Try to auto-detect by reading first few bytes
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    first_char = f.read(1)
+                    if first_char == '{' or first_char == '[':
+                        return self._parse_json(file_path)
+                    else:
+                        return self._parse_tsv(file_path)
+            except Exception:
+                logger.warning("Could not auto-detect format, assuming TSV")
+                return self._parse_tsv(file_path)
+
+    def _parse_json(self, file_path: Path) -> List[Book]:
+        """Parse LibraryThing JSON export format"""
+        books = []
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # JSON format is a dictionary with book IDs as keys
+            for book_id, book_data in data.items():
+                # Extract title
+                title = book_data.get('title', '')
+                if not title:
+                    continue
+
+                # Extract author (prefer "fl" format: "First Last")
+                author = ''
+                if 'authors' in book_data and book_data['authors']:
+                    # Get first author
+                    first_author = book_data['authors'][0]
+                    author = first_author.get('fl', '') or first_author.get('lf', '')
+                elif 'primaryauthor' in book_data:
+                    author = book_data['primaryauthor']
+
+                if not author:
+                    author = 'Unknown Author'
+
+                # Clean author name
+                author = self._clean_author_name(author)
+
+                # Extract ISBN
+                isbn = None
+                if 'originalisbn' in book_data:
+                    isbn = book_data['originalisbn']
+                elif 'isbn' in book_data:
+                    isbn_data = book_data['isbn']
+                    if isinstance(isbn_data, dict):
+                        # Get first ISBN from dict
+                        isbn = next(iter(isbn_data.values()), None)
+                    elif isinstance(isbn_data, list):
+                        isbn = isbn_data[0] if isbn_data else None
+                    else:
+                        isbn = str(isbn_data)
+
+                # Extract publication date
+                pub_date = book_data.get('date', '')
+
+                book = Book(
+                    title=title.strip(),
+                    author=author.strip(),
+                    author_normalized=self._normalize_author_name(author),
+                    isbn=isbn.strip() if isbn else None,
+                    publication_date=pub_date.strip() if pub_date else None,
+                )
+
+                books.append(book)
+
+        except Exception as e:
+            logger.error(f"Error parsing LibraryThing JSON file: {e}")
+            raise
+
+        logger.info(f"Parsed {len(books)} books from LibraryThing JSON export")
+        return books
+
+    def _parse_tsv(self, file_path: Path) -> List[Book]:
+        """Parse LibraryThing TSV export format"""
         books = []
 
         try:
@@ -484,10 +568,10 @@ class LibraryThingParser:
                     books.append(book)
 
         except Exception as e:
-            logger.error(f"Error parsing LibraryThing file: {e}")
+            logger.error(f"Error parsing LibraryThing TSV file: {e}")
             raise
 
-        logger.info(f"Parsed {len(books)} books from LibraryThing export")
+        logger.info(f"Parsed {len(books)} books from LibraryThing TSV export")
         return books
 
     def _clean_author_name(self, author: str) -> str:

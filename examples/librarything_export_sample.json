@@ -1,0 +1,96 @@
+{
+  "sample1": {
+    "books_id": "sample1",
+    "title": "Das Kapital, Vol. 1",
+    "primaryauthor": "Marx, Karl",
+    "authors": [{
+      "lf": "Marx, Karl",
+      "fl": "Karl Marx"
+    }],
+    "originalisbn": "9780140445688",
+    "date": "1867",
+    "tags": ["philosophy", "economics", "political economy"]
+  },
+  "sample2": {
+    "books_id": "sample2",
+    "title": "The Communist Manifesto",
+    "primaryauthor": "Marx, Karl",
+    "authors": [{
+      "lf": "Marx, Karl",
+      "fl": "Karl Marx"
+    }],
+    "date": "1848",
+    "tags": ["philosophy", "communism"]
+  },
+  "sample3": {
+    "books_id": "sample3",
+    "title": "Leaves of Grass",
+    "primaryauthor": "Whitman, Walt",
+    "authors": [{
+      "lf": "Whitman, Walt",
+      "fl": "Walt Whitman"
+    }],
+    "originalisbn": "9780140421996",
+    "date": "1855",
+    "tags": ["poetry", "american literature"]
+  },
+  "sample4": {
+    "books_id": "sample4",
+    "title": "Pride and Prejudice",
+    "primaryauthor": "Austen, Jane",
+    "authors": [{
+      "lf": "Austen, Jane",
+      "fl": "Jane Austen"
+    }],
+    "originalisbn": "9780141439518",
+    "date": "1813",
+    "tags": ["fiction", "romance", "classics"]
+  },
+  "sample5": {
+    "books_id": "sample5",
+    "title": "The Odyssey",
+    "primaryauthor": "Homer",
+    "authors": [{
+      "lf": "Homer",
+      "fl": "Homer"
+    }],
+    "date": "-800",
+    "tags": ["classics", "epic", "greek"]
+  },
+  "sample6": {
+    "books_id": "sample6",
+    "title": "Meditations",
+    "primaryauthor": "Aurelius, Marcus",
+    "authors": [{
+      "lf": "Aurelius, Marcus",
+      "fl": "Marcus Aurelius"
+    }],
+    "originalisbn": "9780140449334",
+    "date": "180",
+    "tags": ["philosophy", "stoicism"]
+  },
+  "sample7": {
+    "books_id": "sample7",
+    "title": "Beyond Good and Evil",
+    "primaryauthor": "Nietzsche, Friedrich",
+    "authors": [{
+      "lf": "Nietzsche, Friedrich",
+      "fl": "Friedrich Nietzsche"
+    }],
+    "originalisbn": "9780679724650",
+    "date": "1886",
+    "tags": ["philosophy", "existentialism"]
+  },
+  "sample8": {
+    "books_id": "sample8",
+    "title": "The Prince",
+    "primaryauthor": "Machiavelli, Niccolò",
+    "authors": [{
+      "lf": "Machiavelli, Niccolò",
+      "fl": "Niccolò Machiavelli"
+    }],
+    "originalisbn": "9780140449150",
+    "date": "1532",
+    "tags": ["philosophy", "political philosophy"]
+  }
+}

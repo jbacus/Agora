@@ -18,13 +18,18 @@ This pipeline automates the workflow of:
 
 1. Go to [LibraryThing.com](https://www.librarything.com) and log in
 2. Navigate to: **More → Export your library**
-3. Select: **Tab-delimited text (opens in Excel)** format
-4. Download the file (usually `LibraryThing_export.tsv`)
+3. Select either format:
+   - **Tab-delimited text (opens in Excel)** (.tsv)
+   - **JSON** (.json) - Both formats are supported!
+4. Download the file (e.g., `LibraryThing_export.tsv` or `librarything_export.json`)
 
 ### 2. Run the Acquisition Script
 
 ```bash
+# Works with both TSV and JSON formats
 python scripts/acquire_from_librarything.py --input /path/to/LibraryThing_export.tsv
+# or
+python scripts/acquire_from_librarything.py --input /path/to/librarything_export.json
 ```
 
 This will:
@@ -229,7 +234,13 @@ Plain text files organized by author:
 
 ### 1. LibraryThing Parsing
 
-The script reads TSV (tab-delimited) exports from LibraryThing and extracts:
+The script supports both JSON and TSV (tab-delimited) export formats from LibraryThing.
+
+**Auto-detection:** The script automatically detects which format you're using based on:
+- File extension (.json, .tsv, .txt)
+- File content (checks first character)
+
+**Extracted data:**
 - Book titles
 - Author names (both "First Last" and "Last, First" formats)
 - ISBNs (for potential future use)

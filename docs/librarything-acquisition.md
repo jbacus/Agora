@@ -24,9 +24,12 @@ pip install requests
 
 1. Go to LibraryThing.com and log in
 2. Navigate to "More" → "Export your library"
-3. Select "Tab-delimited text (opens in Excel)" format
+3. Select your preferred format:
+   - "Tab-delimited text (opens in Excel)" (.tsv)
+   - "JSON" (.json)
+   - Both formats are fully supported!
 4. Click "Download"
-5. Save the file (usually named something like `LibraryThing_export.tsv`)
+5. Save the file (e.g., `LibraryThing_export.tsv` or `librarything_export.json`)
 
 ## Basic Usage
 
