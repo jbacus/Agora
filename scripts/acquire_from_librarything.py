@@ -7,10 +7,19 @@ This script processes a LibraryThing export file, searches for books on Project 
 and other public domain sources, downloads the texts, and prepares them for ingestion
 into the Agora author ingest process.
 
+Features:
+- Configurable rate limiting to avoid API throttling
+- Progress tracking to resume interrupted runs
+- Support for both JSON and TSV LibraryThing exports
+- Multiple download methods (wget and requests)
+- Detailed reporting
+
 Usage:
     python scripts/acquire_from_librarything.py --input library.tsv
     python scripts/acquire_from_librarything.py --input library.tsv --output-dir data/raw
     python scripts/acquire_from_librarything.py --input library.tsv --author-filter "Marx,Whitman"
+    python scripts/acquire_from_librarything.py --input library.tsv --api-delay 3 --download-delay 5
+    python scripts/acquire_from_librarything.py --input library.tsv --resume
 """
 
 import argparse
@@ -72,9 +81,13 @@ class GutenbergSearcher:
     GUTENBERG_API = "https://gutendex.com/books"
     GUTENBERG_MIRROR = "https://www.gutenberg.org"
 
-    def __init__(self):
+    def __init__(self, api_delay: float = 2.0, download_delay: float = 3.0):
         self.session = self._create_session()
         self.cache = {}  # Simple in-memory cache
+        self.api_delay = api_delay  # Delay between API calls
+        self.download_delay = download_delay  # Delay between downloads
+        self.last_api_call = 0  # Timestamp of last API call
+        self.last_download = 0  # Timestamp of last download
 
     def _create_session(self) -> requests.Session:
         """Create a requests session with retry logic"""
@@ -85,14 +98,34 @@ class GutenbergSearcher:
             'Accept': 'application/json',
         })
         retry = Retry(
-            total=3,
-            backoff_factor=1,
+            total=5,
+            backoff_factor=2,
             status_forcelist=[429, 500, 502, 503, 504],
         )
         adapter = HTTPAdapter(max_retries=retry)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
         return session
+
+    def _rate_limit_api_call(self):
+        """Enforce rate limiting for API calls"""
+        if self.last_api_call > 0:
+            elapsed = time.time() - self.last_api_call
+            if elapsed < self.api_delay:
+                sleep_time = self.api_delay - elapsed
+                logger.debug(f"Rate limiting: sleeping {sleep_time:.2f}s before API call")
+                time.sleep(sleep_time)
+        self.last_api_call = time.time()
+
+    def _rate_limit_download(self):
+        """Enforce rate limiting for downloads"""
+        if self.last_download > 0:
+            elapsed = time.time() - self.last_download
+            if elapsed < self.download_delay:
+                sleep_time = self.download_delay - elapsed
+                logger.debug(f"Rate limiting: sleeping {sleep_time:.2f}s before download")
+                time.sleep(sleep_time)
+        self.last_download = time.time()
 
     def search_book(self, title: str, author: str) -> Optional[Dict]:
         """
@@ -137,6 +170,9 @@ class GutenbergSearcher:
     def _search_with_api(self, author: str, title: str) -> Optional[Dict]:
         """Search using the Gutendex API"""
         try:
+            # Rate limit before API call
+            self._rate_limit_api_call()
+
             # Search by author and title
             params = {
                 'search': f"{author} {title}",
@@ -168,6 +204,7 @@ class GutenbergSearcher:
                 }
 
             # Try searching by author only if title search failed
+            self._rate_limit_api_call()
             params = {'search': author}
             response = self.session.get(
                 self.GUTENBERG_API,
@@ -344,6 +381,9 @@ class GutenbergSearcher:
         Returns:
             True if successful, False otherwise
         """
+        # Rate limit before download
+        self._rate_limit_download()
+
         # Try wget first (it often works better than requests for Gutenberg)
         if self._download_with_wget(gutenberg_id, output_path):
             return True
@@ -621,11 +661,48 @@ class LibraryThingParser:
 class TextAcquisitionPipeline:
     """Main pipeline for acquiring texts from LibraryThing export"""
 
-    def __init__(self, output_dir: Path = Path("data/raw")):
+    def __init__(
+        self,
+        output_dir: Path = Path("data/raw"),
+        api_delay: float = 2.0,
+        download_delay: float = 3.0,
+        progress_file: Optional[Path] = None,
+    ):
         self.output_dir = output_dir
-        self.searcher = GutenbergSearcher()
+        self.progress_file = progress_file or Path(".acquisition_progress.json")
+        self.searcher = GutenbergSearcher(api_delay=api_delay, download_delay=download_delay)
         self.parser = LibraryThingParser()
         self.reports: Dict[str, AuthorReport] = {}
+        self.processed_books: Set[str] = self._load_progress()
+
+    def _load_progress(self) -> Set[str]:
+        """Load progress from previous runs"""
+        if self.progress_file.exists():
+            try:
+                with open(self.progress_file, 'r') as f:
+                    data = json.load(f)
+                    processed = set(data.get('processed_books', []))
+                    logger.info(f"Loaded progress: {len(processed)} books already processed")
+                    return processed
+            except Exception as e:
+                logger.warning(f"Could not load progress file: {e}")
+        return set()
+
+    def _save_progress(self, book_key: str):
+        """Save progress after processing each book"""
+        self.processed_books.add(book_key)
+        try:
+            with open(self.progress_file, 'w') as f:
+                json.dump({
+                    'processed_books': list(self.processed_books),
+                    'last_updated': time.strftime('%Y-%m-%d %H:%M:%S')
+                }, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not save progress: {e}")
+
+    def _create_book_key(self, book: Book) -> str:
+        """Create a unique key for a book"""
+        return f"{book.author_normalized}:{book.title}"
 
     def process(
         self,
@@ -645,6 +722,8 @@ class TextAcquisitionPipeline:
             Dictionary mapping author IDs to AuthorReport objects
         """
         logger.info(f"Processing LibraryThing export: {input_file}")
+        logger.info(f"Rate limiting: {self.searcher.api_delay}s between API calls, "
+                   f"{self.searcher.download_delay}s between downloads")
 
         # Parse the export file
         books = self.parser.parse(input_file)
@@ -693,6 +772,19 @@ class TextAcquisitionPipeline:
         author_dir.mkdir(parents=True, exist_ok=True)
 
         for book in books:
+            book_key = self._create_book_key(book)
+
+            # Skip if already processed
+            if book_key in self.processed_books:
+                logger.info(f"  Skipping (already processed): {book.title}")
+                # Try to load previous download info
+                output_path = author_dir / self._create_filename(book.title)
+                if output_path.exists():
+                    book.downloaded = True
+                    book.download_path = str(output_path)
+                    report.books_downloaded += 1
+                continue
+
             logger.info(f"  Searching: {book.title}")
 
             # Search for the book on Gutenberg
@@ -719,13 +811,13 @@ class TextAcquisitionPipeline:
                     book.error = "Download failed"
                     report.books_failed += 1
                     logger.warning(f"    Failed to download")
-
-                # Rate limiting - be nice to Gutenberg
-                time.sleep(1)
             else:
                 book.error = "Not found on Gutenberg"
                 report.books_failed += 1
                 logger.info(f"    Not found on Gutenberg")
+
+            # Save progress after each book
+            self._save_progress(book_key)
 
         return report
 
@@ -1032,11 +1124,49 @@ def main():
         action='store_true',
         help='Enable verbose logging'
     )
+    parser.add_argument(
+        '--api-delay',
+        type=float,
+        default=2.0,
+        help='Delay in seconds between API calls (default: 2.0)'
+    )
+    parser.add_argument(
+        '--download-delay',
+        type=float,
+        default=3.0,
+        help='Delay in seconds between downloads (default: 3.0)'
+    )
+    parser.add_argument(
+        '--resume',
+        action='store_true',
+        help='Resume from previous run using saved progress'
+    )
+    parser.add_argument(
+        '--reset-progress',
+        action='store_true',
+        help='Delete progress file and start fresh'
+    )
+    parser.add_argument(
+        '--progress-file',
+        type=Path,
+        default=Path('.acquisition_progress.json'),
+        help='Path to progress file (default: .acquisition_progress.json)'
+    )
 
     args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # Handle progress file options
+    if args.reset_progress and args.progress_file.exists():
+        logger.info(f"Deleting progress file: {args.progress_file}")
+        args.progress_file.unlink()
+
+    if args.resume and args.progress_file.exists():
+        logger.info("Resuming from previous run")
+    elif args.resume:
+        logger.warning("--resume specified but no progress file found, starting fresh")
 
     # Parse author filter
     author_filter = None
@@ -1044,7 +1174,12 @@ def main():
         author_filter = set(a.strip() for a in args.author_filter.split(','))
 
     # Run the pipeline
-    pipeline = TextAcquisitionPipeline(output_dir=args.output_dir)
+    pipeline = TextAcquisitionPipeline(
+        output_dir=args.output_dir,
+        api_delay=args.api_delay,
+        download_delay=args.download_delay,
+        progress_file=args.progress_file,
+    )
 
     try:
         pipeline.process(
