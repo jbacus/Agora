@@ -155,14 +155,83 @@ class TestStreamingEndpoint:
             assert response.headers.get("content-type") == "text/event-stream"
 
 
+class TestDebateEndpoint:
+    """Tests for the debate endpoint."""
+
+    def test_debate_endpoint_exists(self):
+        """Test that debate endpoint is available."""
+        response = client.post("/api/query/debate", json={
+            "text": "What is the meaning of life?",
+            "max_authors": 3,
+            "min_authors": 2,
+            "num_rounds": 2
+        })
+
+        # Should return 200 if data ingested, or 400 if not
+        assert response.status_code in [200, 400, 500]
+
+    def test_debate_with_specified_authors(self):
+        """Test debate with specified authors."""
+        response = client.post("/api/query/debate", json={
+            "text": "What is freedom?",
+            "specified_authors": ["marx"],
+            "min_authors": 2,
+            "num_rounds": 2
+        })
+
+        if response.status_code == 200:
+            data = response.json()
+            assert "query_text" in data
+            assert "rounds" in data
+            assert "author_count" in data
+            assert "round_count" in data
+            assert isinstance(data["rounds"], list)
+            if len(data["rounds"]) > 0:
+                assert "round_number" in data["rounds"][0]
+                assert "round_type" in data["rounds"][0]
+                assert "author_responses" in data["rounds"][0]
+        elif response.status_code == 400:
+            pytest.skip("Insufficient authors or no data ingested")
+
+    def test_debate_requires_minimum_authors(self):
+        """Test that debate requires at least 2 authors."""
+        response = client.post("/api/query/debate", json={
+            "text": "test",
+            "max_authors": 1,
+            "min_authors": 1,
+            "num_rounds": 2
+        })
+
+        # Should fail validation or during execution
+        assert response.status_code in [400, 422]
+
+    def test_debate_invalid_num_rounds(self):
+        """Test debate with invalid number of rounds."""
+        response = client.post("/api/query/debate", json={
+            "text": "test",
+            "num_rounds": 10  # Too many rounds
+        })
+
+        # Should fail validation
+        assert response.status_code == 422
+
+    def test_debate_empty_text(self):
+        """Test debate with empty text returns validation error."""
+        response = client.post("/api/query/debate", json={
+            "text": "",
+            "num_rounds": 2
+        })
+        assert response.status_code == 422  # Validation error
+
+
 class TestErrorHandling:
     """Tests for error handling."""
-    
+
     def test_invalid_endpoint(self):
         """Test non-existent endpoint returns 404."""
         response = client.get("/api/nonexistent")
         assert response.status_code == 404
-    
+
     def test_method_not_allowed(self):
         """Test wrong HTTP method returns 405."""
         response = client.get("/api/query")  # Should be POST

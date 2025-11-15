@@ -16,6 +16,9 @@ from .schemas import (
     AuthorListResponse,
     AuthorResponseSchema,
     DebatePanelResponseSchema,
+    DebateRequest,
+    DebateResponseSchema,
+    DebateRoundSchema,
     QueryRequest,
 )
 
@@ -137,6 +140,132 @@ def create_router(services: Dict) -> APIRouter:
             raise
         except Exception as e:
             logger.error(f"Error processing query: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Internal server error: {str(e)}"
+            )
+
+    @router.post("/query/debate", response_model=DebateResponseSchema)
+    async def query_debate(request: DebateRequest):
+        """
+        Start a multi-round debate between authors.
+
+        This endpoint:
+        1. Accepts a user query and debate parameters
+        2. Selects relevant authors (automatically or from specified list)
+        3. Generates initial responses from each author
+        4. Conducts additional rounds where authors respond to each other
+        5. Returns formatted debate with all rounds
+
+        **Minimum 2 authors required for a debate.**
+        """
+        start_time = time.time()
+
+        try:
+            # Create Query object
+            query = Query(
+                text=request.text,
+                specified_authors=request.specified_authors,
+                max_authors=request.max_authors,
+                min_authors=request.min_authors,
+                relevance_threshold=request.relevance_threshold
+            )
+
+            # Get services
+            semantic_router = services["semantic_router"]
+            rag_pipeline = services["rag_pipeline"]
+            debate_orchestrator = services["debate_orchestrator"]
+            authors_dict = services["authors"]
+
+            # Step 1: Select authors
+            logger.info(f"Selecting authors for debate: {query.text[:50]}...")
+            selection_result = semantic_router.select_authors(query)
+
+            if not selection_result.selected_authors:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No relevant authors found for query"
+                )
+
+            if len(selection_result.selected_authors) < 2:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Debate requires at least 2 authors"
+                )
+
+            logger.info(
+                f"Selected {len(selection_result.selected_authors)} authors: "
+                f"{', '.join(selection_result.selected_authors)}"
+            )
+
+            # Step 2: Get author objects
+            selected_author_objs = [
+                authors_dict[author_id]
+                for author_id in selection_result.selected_authors
+                if author_id in authors_dict
+            ]
+
+            if not selected_author_objs:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Selected authors not found in author database"
+                )
+
+            # Step 3: Generate initial responses concurrently
+            logger.info("Generating initial responses from authors...")
+            initial_responses = await rag_pipeline.generate_responses_concurrent(
+                query=query,
+                authors=selected_author_objs,
+                query_embedding=selection_result.query_vector
+            )
+
+            if not initial_responses:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to generate any responses"
+                )
+
+            # Step 4: Orchestrate debate
+            logger.info(f"Orchestrating {request.num_rounds}-round debate...")
+            debate_response = await debate_orchestrator.orchestrate_debate(
+                query=query,
+                authors=selected_author_objs,
+                initial_responses=initial_responses,
+                query_embedding=selection_result.query_vector,
+                selection_method=selection_result.selection_method,
+                num_rounds=request.num_rounds
+            )
+
+            # Step 5: Format and return
+            return DebateResponseSchema(
+                query_text=debate_response.query.text,
+                rounds=[
+                    DebateRoundSchema(
+                        round_number=round_obj.round_number,
+                        round_type=round_obj.round_type,
+                        author_responses=[
+                            AuthorResponseSchema(
+                                author_id=resp.author_id,
+                                author_name=resp.author_name,
+                                response_text=resp.response_text,
+                                relevance_score=resp.relevance_score,
+                                generation_time_ms=resp.generation_time_ms
+                            )
+                            for resp in round_obj.author_responses
+                        ]
+                    )
+                    for round_obj in debate_response.rounds
+                ],
+                total_time_ms=debate_response.total_time_ms,
+                selection_method=debate_response.selection_method,
+                author_count=debate_response.author_count,
+                round_count=debate_response.round_count
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error processing debate: {e}", exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail=f"Internal server error: {str(e)}"

@@ -10,6 +10,7 @@ The Virtual Debate Panel uses a Retrieval-Augmented Generation (RAG) pipeline wi
 
 - **Intelligent Author Selection**: Semantic router automatically selects relevant authors based on query content
 - **Concurrent Multi-Author Responses**: Parallel RAG pipeline for simultaneous author responses
+- **Multi-Round Debates**: NEW! Make authors "fight" - authors respond to and critique each other's perspectives across multiple rounds
 - **Distinct Author Voices**: Each author maintains unique tone, vocabulary, and philosophical stance
 - **Comparative Formatting**: Clear presentation of contrasting viewpoints
 - **Brief Responses**: Max 3 paragraphs per author for concise, focused debate
@@ -115,6 +116,7 @@ virtual-debate-panel/
 │   │   ├── __init__.py
 │   │   ├── llm_client.py       # LLM API integration
 │   │   ├── rag_pipeline.py     # RAG retrieval & generation
+│   │   ├── debate_orchestrator.py  # Multi-round debate orchestration
 │   │   └── prompts.py          # System prompt management
 │   ├── routing/                 # Logic layer
 │   │   ├── __init__.py
