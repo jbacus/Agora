@@ -252,7 +252,8 @@ async function handleStreamingDebate(query) {
     const debateState = {
         rounds: [],
         currentRound: null,
-        authors: []
+        authors: [],
+        currentAuthorResponse: null
     };
 
     try {
@@ -285,16 +286,38 @@ async function handleStreamingDebate(query) {
                         displayDebateStreaming(debateState);
                         break;
 
-                    case 'response':
-                        const authorResponse = {
+                    case 'author_start':
+                        // Start new author response
+                        debateState.currentAuthorResponse = {
                             author_id: data.author_id,
                             author_name: data.author_name,
-                            response_text: data.response_text,
-                            relevance_score: data.relevance_score,
-                            retrieved_chunks: data.retrieved_chunks
+                            response_text: '',
+                            relevance_score: 0,
+                            retrieved_chunks: [],
+                            streaming: true
                         };
-                        debateState.currentRound.author_responses.push(authorResponse);
+                        debateState.currentRound.author_responses.push(debateState.currentAuthorResponse);
                         displayDebateStreaming(debateState);
+                        break;
+
+                    case 'token':
+                        // Append token to current response
+                        if (debateState.currentAuthorResponse && data.author_id === debateState.currentAuthorResponse.author_id) {
+                            debateState.currentAuthorResponse.response_text += data.token;
+                            displayDebateStreaming(debateState);
+                        }
+                        break;
+
+                    case 'response_complete':
+                        // Finalize response
+                        if (debateState.currentAuthorResponse) {
+                            debateState.currentAuthorResponse.response_text = data.response_text;
+                            debateState.currentAuthorResponse.relevance_score = data.relevance_score;
+                            debateState.currentAuthorResponse.retrieved_chunks = data.retrieved_chunks;
+                            debateState.currentAuthorResponse.streaming = false;
+                            debateState.currentAuthorResponse = null;
+                            displayDebateStreaming(debateState);
+                        }
                         break;
 
                     case 'done':
@@ -324,19 +347,24 @@ function displayDebateStreaming(debateState) {
                         <div class="flex items-center gap-4 mb-6">
                             <div>
                                 <h3 class="font-bold text-xl mb-1">${response.author_name}</h3>
-                                ${round.round_number === 1 ? `<p class="text-sm text-gray-500 dark:text-gray-400">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>` : ''}
+                                ${round.round_number === 1 && response.relevance_score ? `<p class="text-sm text-gray-500 dark:text-gray-400">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>` : ''}
                             </div>
                         </div>
                         <div class="prose">
-                            ${formatResponse(response.response_text)}
-                            ${buildCitations(response)}
+                            ${formatResponse(response.response_text)}${response.streaming ? '<span class="inline-block w-2 h-5 ml-1 bg-blue-500 animate-pulse"></span>' : ''}
+                            ${!response.streaming && response.retrieved_chunks ? buildCitations(response) : ''}
                         </div>
                     </div>
                 `).join('')}
-                ${round.author_responses.length < debateState.authors.length ? '<div class="author-card animate-pulse"><div class="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div></div>' : ''}
             </div>
         </div>
     `).join('');
+
+    // Auto-scroll to bottom as new content appears
+    const lastCard = responsesDiv.lastElementChild;
+    if (lastCard) {
+        lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 function handleClear() {

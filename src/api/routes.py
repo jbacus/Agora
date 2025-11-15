@@ -23,6 +23,78 @@ from .schemas import (
 )
 
 
+async def generate_streaming_response(
+    agent,
+    query,
+    other_responses,
+    round_number,
+    yield_func=None
+):
+    """
+    Generate a streaming response from an agent.
+
+    Returns dict with 'stream' generator, 'retrieved_chunks', 'relevance_score', 'generation_time_ms'
+    """
+    import time
+    import asyncio
+
+    start_time = time.time()
+
+    # Build debate prompt
+    from src.processing.agentic_debate_orchestrator import DebateAgent
+
+    if isinstance(agent, DebateAgent):
+        debate_prompt = agent._build_agentic_prompt(
+            query=query,
+            other_responses=other_responses,
+            reasoning_chain=agent.reasoning_chain,
+            round_number=round_number
+        )
+    else:
+        debate_prompt = query.text
+
+    # Retrieve relevant chunks
+    loop = asyncio.get_event_loop()
+
+    query_embedding = await loop.run_in_executor(
+        None,
+        agent.rag_pipeline.embedding_provider.embed_text,
+        query.text
+    )
+
+    chunks_with_scores = await loop.run_in_executor(
+        None,
+        agent.rag_pipeline.vector_db.search_chunks,
+        query_embedding,
+        agent.author.id,
+        agent.rag_pipeline.top_k_chunks
+    )
+
+    retrieved_chunks = [
+        {"id": chunk.id, "metadata": chunk.metadata}
+        for chunk, _ in chunks_with_scores
+    ]
+
+    # Create async generator for streaming
+    async def stream_tokens():
+        for token in agent.llm_client.generate_streaming(
+            agent.author.system_prompt,
+            debate_prompt,
+            agent.max_response_tokens,
+            agent.temperature
+        ):
+            yield token
+
+    elapsed_ms = (time.time() - start_time) * 1000
+
+    return {
+        'stream': stream_tokens(),
+        'retrieved_chunks': retrieved_chunks,
+        'relevance_score': 1.0,
+        'generation_time_ms': elapsed_ms
+    }
+
+
 def create_router(services: Dict) -> APIRouter:
     """
     Create API router with injected services.
@@ -565,19 +637,64 @@ def create_router(services: Dict) -> APIRouter:
                 # Send selected authors
                 yield f"data: {json.dumps({'type': 'authors', 'authors': [{'id': a.id, 'name': a.name} for a in selected_author_objs]})}\n\n"
 
-                # Step 2: Generate initial responses
+                # Step 2: Generate initial responses with token streaming
                 logger.info("Generating initial responses...")
                 yield f"data: {json.dumps({'type': 'round_start', 'round_number': 1, 'round_type': 'initial'})}\n\n"
 
-                initial_responses = await rag_pipeline.generate_responses_concurrent(
-                    query=query,
-                    authors=selected_author_objs,
-                    query_embedding=selection_result.query_vector
-                )
+                initial_responses = []
+                for author in selected_author_objs:
+                    # Signal author start
+                    yield f"data: {json.dumps({'type': 'author_start', 'round_number': 1, 'author_id': author.id, 'author_name': author.name})}\n\n"
 
-                # Stream initial responses
-                for response in initial_responses:
-                    yield f"data: {json.dumps({'type': 'response', 'round_number': 1, 'author_id': response.author_id, 'author_name': response.author_name, 'response_text': response.response_text, 'relevance_score': response.relevance_score, 'retrieved_chunks': response.retrieved_chunks})}\n\n"
+                    # Generate with token streaming
+                    import time
+                    start_time = time.time()
+
+                    # Get chunks
+                    chunks_with_scores = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        rag_pipeline.vector_db.search_chunks,
+                        selection_result.query_vector,
+                        author.id,
+                        rag_pipeline.top_k_chunks
+                    )
+
+                    retrieved_chunks = [
+                        {"id": chunk.id, "metadata": chunk.metadata}
+                        for chunk, _ in chunks_with_scores
+                    ]
+
+                    # Stream tokens
+                    full_text = ""
+                    for token in llm_client.generate_streaming(
+                        author.system_prompt,
+                        query.text,
+                        rag_pipeline.max_response_tokens,
+                        rag_pipeline.temperature
+                    ):
+                        full_text += token
+                        yield f"data: {json.dumps({'type': 'token', 'round_number': 1, 'author_id': author.id, 'author_name': author.name, 'token': token})}\n\n"
+
+                    elapsed_ms = (time.time() - start_time) * 1000
+
+                    # Compute relevance
+                    similarity = sum(
+                        c.metadata.get('similarity', 0) for c, _ in chunks_with_scores
+                    ) / len(chunks_with_scores) if chunks_with_scores else 0
+
+                    # Signal complete
+                    yield f"data: {json.dumps({'type': 'response_complete', 'round_number': 1, 'author_id': author.id, 'author_name': author.name, 'response_text': full_text, 'relevance_score': similarity, 'retrieved_chunks': retrieved_chunks})}\n\n"
+
+                    # Store for next round
+                    from src.data.models import AuthorResponse
+                    initial_responses.append(AuthorResponse(
+                        author_id=author.id,
+                        author_name=author.name,
+                        response_text=full_text,
+                        relevance_score=similarity,
+                        retrieved_chunks=retrieved_chunks,
+                        generation_time_ms=elapsed_ms
+                    ))
 
                 # Step 3: Orchestrate additional rounds with streaming
                 from src.processing.agentic_debate_orchestrator import (
@@ -623,6 +740,7 @@ def create_router(services: Dict) -> APIRouter:
                     logger.info(f"Generating agentic round {round_num}...")
 
                     # Generate responses for this round
+                    round_responses = []
                     for agent in agents.values():
                         # Get other authors' responses
                         other_responses = [
@@ -630,22 +748,41 @@ def create_router(services: Dict) -> APIRouter:
                             if resp.author_id != agent.author.id
                         ]
 
-                        # Generate response
-                        response = await agent.generate_response(
+                        # Signal author start
+                        yield f"data: {json.dumps({'type': 'author_start', 'round_number': round_num, 'author_id': agent.author.id, 'author_name': agent.author.name})}\n\n"
+
+                        # Generate response with streaming
+                        response = await generate_streaming_response(
+                            agent=agent,
                             query=query,
                             other_responses=other_responses,
                             round_number=round_num,
-                            use_tools=True
+                            yield_func=lambda token: f"data: {json.dumps({'type': 'token', 'round_number': round_num, 'author_id': agent.author.id, 'token': token})}\n\n"
                         )
 
-                        # Stream the response immediately
-                        yield f"data: {json.dumps({'type': 'response', 'round_number': round_num, 'author_id': response.author_id, 'author_name': response.author_name, 'response_text': response.response_text, 'relevance_score': response.relevance_score, 'retrieved_chunks': response.retrieved_chunks})}\n\n"
+                        # Yield each token as it's generated
+                        full_text = ""
+                        async for token in response['stream']:
+                            full_text += token
+                            yield f"data: {json.dumps({'type': 'token', 'round_number': round_num, 'author_id': agent.author.id, 'author_name': agent.author.name, 'token': token})}\n\n"
 
-                        # Update previous responses list
-                        if round_num == 2:
-                            previous_responses = [response]
-                        else:
-                            previous_responses.append(response)
+                        # Signal author complete with final response
+                        yield f"data: {json.dumps({'type': 'response_complete', 'round_number': round_num, 'author_id': agent.author.id, 'author_name': agent.author.name, 'response_text': full_text, 'relevance_score': response['relevance_score'], 'retrieved_chunks': response['retrieved_chunks']})}\n\n"
+
+                        # Store for next round
+                        from src.data.models import AuthorResponse
+                        author_response = AuthorResponse(
+                            author_id=agent.author.id,
+                            author_name=agent.author.name,
+                            response_text=full_text,
+                            relevance_score=1.0,
+                            retrieved_chunks=response['retrieved_chunks'],
+                            generation_time_ms=response['generation_time_ms']
+                        )
+                        round_responses.append(author_response)
+
+                    # Update previous responses for next round
+                    previous_responses = round_responses
 
                 # Send completion signal
                 stats = await knowledge_base.get_stats()
