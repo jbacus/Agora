@@ -108,6 +108,12 @@ class RAGPipeline:
 
         elapsed_ms = (time.time() - start_time) * 1000
 
+        # Build retrieved chunks with metadata
+        retrieved_chunks = [
+            {"id": chunk.id, "metadata": chunk.metadata}
+            for chunk, _ in chunks_with_scores
+        ]
+
         logger.info(
             f"Generated response for {author.name} "
             f"(relevance={relevance_score:.2f}, time={elapsed_ms:.0f}ms)"
@@ -118,7 +124,7 @@ class RAGPipeline:
             author_name=author.name,
             response_text=response_text,
             relevance_score=relevance_score,
-            retrieved_chunks=[chunk.id for chunk, _ in chunks_with_scores],
+            retrieved_chunks=retrieved_chunks,
             generation_time_ms=elapsed_ms
         )
 

@@ -115,8 +115,8 @@ class AuthorResponse(BaseModel):
     relevance_score: float = Field(
         ..., ge=0.0, le=1.0, description="Semantic similarity to query"
     )
-    retrieved_chunks: List[str] = Field(
-        default_factory=list, description="IDs of chunks used for context"
+    retrieved_chunks: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Chunks used for context with metadata"
     )
     generation_time_ms: Optional[float] = Field(
         None, description="Time taken to generate response"

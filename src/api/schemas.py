@@ -1,7 +1,7 @@
 """
 Pydantic schemas for API requests and responses.
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,7 @@ class AuthorResponseSchema(BaseModel):
     author_name: str
     response_text: str
     relevance_score: float
+    retrieved_chunks: List[Dict[str, Any]] = []
     generation_time_ms: Optional[float] = None
 
     class Config:

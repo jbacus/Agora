@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     top_k_chunks: int = Field(default=5, ge=1, le=20, description="Number of chunks to retrieve")
     chunk_size: int = Field(default=500, ge=100, le=2000, description="Text chunk size in tokens")
     chunk_overlap: int = Field(default=50, ge=0, le=500, description="Overlap between chunks")
-    max_response_tokens: int = Field(default=300, ge=50, le=1000, description="Max tokens in response")
+    max_response_tokens: int = Field(default=250, ge=50, le=1000, description="Max tokens in response")
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="LLM temperature")
 
     # API Server Configuration
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
 
     # Logging Configuration
     log_level: str = Field(default="INFO", description="Log level (DEBUG, INFO, WARNING, ERROR)")
-    log_format: str = Field(default="json", description="Log format (json, text)")
+    log_format: str = Field(default="text", description="Log format (json, text)")
     log_file: str = Field(default="./logs/app.log", description="Log file path")
     debug: bool = Field(default=False, description="Enable debug mode")
 

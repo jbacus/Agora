@@ -127,6 +127,7 @@ def create_router(services: Dict) -> APIRouter:
                         author_name=resp.author_name,
                         response_text=resp.response_text,
                         relevance_score=resp.relevance_score,
+                        retrieved_chunks=resp.retrieved_chunks,
                         generation_time_ms=resp.generation_time_ms
                     )
                     for resp in debate_response.authors
@@ -139,7 +140,7 @@ def create_router(services: Dict) -> APIRouter:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error processing query: {e}", exc_info=True)
+            logger.error(f"Error processing query: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Internal server error: {str(e)}"
@@ -249,6 +250,7 @@ def create_router(services: Dict) -> APIRouter:
                                 author_name=resp.author_name,
                                 response_text=resp.response_text,
                                 relevance_score=resp.relevance_score,
+                                retrieved_chunks=resp.retrieved_chunks,
                                 generation_time_ms=resp.generation_time_ms
                             )
                             for resp in round_obj.author_responses

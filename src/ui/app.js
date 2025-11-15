@@ -128,14 +128,17 @@ function buildCitations(response) {
     const uniqueSources = new Map();
 
     response.retrieved_chunks.forEach(chunk => {
-        if (chunk.metadata && chunk.metadata.source) {
-            const source = chunk.metadata.source;
-            const key = source;
+        if (chunk.metadata && chunk.metadata.book) {
+            // Format book name nicely (replace underscores with spaces, capitalize)
+            const bookName = chunk.metadata.book
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+            const key = chunk.metadata.book;
 
             if (!uniqueSources.has(key)) {
                 const citation = {
-                    source: source,
-                    page: chunk.metadata.page_number || chunk.metadata.chapter || null
+                    source: bookName,
+                    book_id: chunk.metadata.book
                 };
                 uniqueSources.set(key, citation);
             }
@@ -147,13 +150,8 @@ function buildCitations(response) {
     }
 
     const citationList = Array.from(uniqueSources.values())
-        .map(c => {
-            if (c.page) {
-                return `<span class="citation-title">${c.source}</span>, ${c.page}`;
-            }
-            return `<span class="citation-title">${c.source}</span>`;
-        })
-        .join('; ');
+        .map(c => `<span class="citation-title">${c.source}</span>`)
+        .join(', ');
 
     return `<div class="citation">Sources: ${citationList}</div>`;
 }
