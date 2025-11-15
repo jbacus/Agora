@@ -70,3 +70,8 @@ Thumbs.db
 *.temp
 tmp/
 temp/
+
+# LibraryThing acquisition outputs
+acquisition_report.txt
+acquisition_report.json
+download_texts.sh
