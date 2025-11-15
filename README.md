@@ -56,10 +56,10 @@ The Virtual Debate Panel uses a Retrieval-Augmented Generation (RAG) pipeline wi
 ### Prerequisites
 
 - Python 3.10+
-- Poetry or pip
+- Poetry (recommended) or pip
 - API keys for:
-  - LLM provider (Google Gemini or OpenAI)
-  - Vector database (ChromaDB local or Pinecone cloud)
+  - LLM provider (Google Gemini, OpenAI, or Anthropic)
+  - Vector database (ChromaDB local or Pinecone cloud - ChromaDB is default)
 
 ### Installation
 
@@ -159,30 +159,32 @@ virtual-debate-panel/
 
 ## 🛠️ Development Phases
 
-### Phase 1: MVP - Single-Author & Data Pipeline ✅ (Current)
+### Phase 1: MVP - Single-Author & Data Pipeline ✅
 
 - [x] P1.1: Project setup & configuration
-- [ ] P1.2: Data ingestion for Marx
-- [ ] P1.3: RAG pipeline (single author)
-- [ ] P1.4: Basic UI (Marx-only selection)
+- [x] P1.2: Data ingestion pipeline
+- [x] P1.3: RAG pipeline (single and multi-author)
+- [x] P1.4: Basic UI
 
-**Goal**: Working chat interface with Karl Marx responding using RAG.
+**Goal**: Working chat interface with authors responding using RAG. ✅
 
-### Phase 2: Multi-Author Router
+### Phase 2: Multi-Author Router ✅
 
-- [ ] P2.1: Create expertise profiles (Marx, Whitman, Baudelaire)
-- [ ] P2.2: Implement semantic router
-- [ ] P2.3: Update UI for automatic author selection
+- [x] P2.1: Create expertise profiles (Marx, Whitman, Manson, and more)
+- [x] P2.2: Implement semantic router with threshold-based selection
+- [x] P2.3: Update UI for automatic author selection
 
-**Goal**: System automatically selects relevant authors based on query.
+**Goal**: System automatically selects relevant authors based on query. ✅
 
-### Phase 3: Virtual Debate Panel
+### Phase 3: Virtual Debate Panel ✅
 
-- [ ] P3.1: Parallel processing for concurrent responses
-- [ ] P3.2: System prompt enforcement (3-paragraph limit)
-- [ ] P3.3: Response aggregation & comparative formatting
+- [x] P3.1: Parallel processing for concurrent responses
+- [x] P3.2: System prompt enforcement (3-paragraph limit)
+- [x] P3.3: Response aggregation & comparative formatting
+- [x] P3.4: Streaming support via Server-Sent Events
+- [x] P3.5: Response caching and telemetry
 
-**Goal**: Full multi-author debate with clear contrasting viewpoints.
+**Goal**: Full multi-author debate with clear contrasting viewpoints. ✅
 
 ## 🔧 Configuration
 
@@ -190,10 +192,11 @@ virtual-debate-panel/
 
 ```bash
 # LLM Configuration
-LLM_PROVIDER=gemini  # or 'openai'
+LLM_PROVIDER=gemini  # or 'openai', 'anthropic'
 GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.0-flash-exp  # Current default
 OPENAI_API_KEY=your_key_here
-LLM_MODEL=gemini-2.5-pro  # or 'gpt-4-turbo'
+ANTHROPIC_API_KEY=your_key_here
 
 # Vector Database
 VECTOR_DB=chromadb  # or 'pinecone'
@@ -205,7 +208,7 @@ PINECONE_ENVIRONMENT=us-west1-gcp
 EMBEDDING_MODEL=text-embedding-004  # or 'text-embedding-ada-002'
 
 # Semantic Router
-RELEVANCE_THRESHOLD=0.7
+RELEVANCE_THRESHOLD=0.60  # Empirically tested optimal value
 MIN_AUTHORS=2
 MAX_AUTHORS=5
 
@@ -217,7 +220,13 @@ CORS_ORIGINS=http://localhost:3000
 
 ### Author Configuration
 
-Author profiles are defined in `config/authors/` as YAML files:
+Author profiles are defined in `config/authors/` as YAML files. Currently available authors:
+
+- **Karl Marx** - Political economy, capitalism, class struggle
+- **Walt Whitman** - Poetry, democracy, transcendentalism, American identity
+- **Mark Manson** - Psychology, self-help, personal development, modern culture
+
+Example configuration:
 
 ```yaml
 # config/authors/marx.yaml
@@ -250,8 +259,9 @@ data/raw/
 │   └── grundrisse.txt
 ├── whitman/
 │   └── leaves_of_grass.txt
-└── baudelaire/
-    └── subtle_art.txt
+└── manson/
+    ├── subtle_art.txt
+    └── everything_is_fucked.txt
 ```
 
 ### Processing Pipeline
@@ -277,10 +287,11 @@ pytest tests/integration/test_rag_pipeline.py
 
 ## 📈 Performance Targets
 
-- **Query Latency**: <3s for single author, <5s for panel
-- **Concurrent Authors**: 5 simultaneous RAG pipelines
-- **Vector Search**: <200ms per author
-- **LLM Generation**: <2s per author (streaming)
+- **Query Latency**: <3s for single author, <5s for panel (achieved)
+- **Concurrent Authors**: 5 simultaneous RAG pipelines (implemented)
+- **Vector Search**: <200ms per author (achieved)
+- **LLM Generation**: <2s per author with streaming (implemented)
+- **Cache Hit Rate**: >70% for repeated queries (implemented)
 
 ## 🚢 Deployment
 
@@ -299,8 +310,10 @@ The deployment pipeline automatically:
 ### Documentation
 - **[Automated Deployment Guide](docs/AUTOMATED_DEPLOYMENT.md)** - Full automation setup
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Infrastructure setup
-- **[CI/CD Setup](docs/CI_CD_SETUP.md)** - Pipeline configuration
+- **[API Documentation](docs/API.md)** - Complete API reference
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture overview
 - **[Service Accounts](docs/SERVICE_ACCOUNTS_GUIDE.md)** - Permissions setup
+- **[Usage Guide](USAGE.md)** - Detailed usage instructions
 
 ## 🤝 Contributing
 

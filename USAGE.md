@@ -32,24 +32,22 @@ python scripts/clean_texts.py
 python scripts/init_database.py
 
 # Ingest authors (will take a few minutes each)
-python scripts/ingest_author.py --author marx
-python scripts/ingest_author.py --author whitman
-
-# If you have Baudelaire content:
-python scripts/ingest_author.py --author baudelaire
+poetry run python scripts/ingest_author.py --author marx
+poetry run python scripts/ingest_author.py --author whitman
+poetry run python scripts/ingest_author.py --author manson
 
 # Generate expertise profiles
-python scripts/create_expertise_profiles.py
+poetry run python scripts/create_expertise_profiles.py
 ```
 
 ### 3. Test the System (5-10 minutes)
 
 ```bash
 # Test RAG pipeline
-python scripts/test_rag.py
+poetry run python scripts/test_rag.py
 
 # Start API server
-uvicorn src.api.main:app --reload
+poetry run uvicorn src.api.main:app --reload
 
 # In another terminal, test endpoints
 curl http://localhost:8000/api/health
@@ -105,7 +103,7 @@ Content-Type: application/json
 {
   "query": "What is freedom?",
   "max_authors": 5,
-  "relevance_threshold": 0.7
+  "relevance_threshold": 0.60
 }
 
 # Returns all responses at once
@@ -371,12 +369,17 @@ python scripts/create_expertise_profiles.py
 Edit `.env`:
 ```bash
 # More selective (fewer authors)
-RELEVANCE_THRESHOLD=0.8
+RELEVANCE_THRESHOLD=0.75
 MIN_AUTHORS=1
 MAX_AUTHORS=3
 
+# Default (balanced selection)
+RELEVANCE_THRESHOLD=0.60  # Empirically tested optimal value
+MIN_AUTHORS=2
+MAX_AUTHORS=5
+
 # More inclusive (more authors)
-RELEVANCE_THRESHOLD=0.5
+RELEVANCE_THRESHOLD=0.45
 MIN_AUTHORS=2
 MAX_AUTHORS=5
 ```
@@ -385,6 +388,11 @@ MAX_AUTHORS=5
 
 Edit `.env`:
 ```bash
+# Use Gemini (default, recommended)
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_key
+GEMINI_MODEL=gemini-2.0-flash-exp
+
 # Use OpenAI
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your_openai_key
@@ -460,7 +468,14 @@ system_prompt: |
   - Highlight contradictions in capitalism
 ```
 
-### Multi-Panel Configuration
+### Available Authors
+
+Currently configured authors:
+- **marx** - Karl Marx (political economy, capitalism, class struggle)
+- **whitman** - Walt Whitman (poetry, democracy, transcendentalism)
+- **manson** - Mark Manson (psychology, self-help, modern culture)
+
+### Multi-Panel Configuration (Future Feature)
 
 Create panel configs in `config/panels/`:
 ```yaml
@@ -470,10 +485,10 @@ panel:
   name: "Philosophy Panel"
 authors:
   - marx
-  - nietzsche
-  - plato
+  - whitman
+  - manson
 settings:
-  relevance_threshold: 0.6
+  relevance_threshold: 0.60
 ```
 
 ---
@@ -481,12 +496,14 @@ settings:
 ## Tips & Best Practices
 
 1. **Start with one author** (Marx) to verify everything works
-2. **Test locally** before deploying to production
-3. **Monitor cache hit rate** - should be >70% after initial queries
-4. **Use streaming** for better UX with multiple authors
-5. **Set reasonable limits** (max_authors=3-5) to control costs
-6. **Regular testing** with `pytest` and `test_performance.py`
-7. **Check telemetry** weekly to understand usage patterns
+2. **Use Poetry** for dependency management - it's more reliable than pip
+3. **Test locally** before deploying to production
+4. **Monitor cache hit rate** - should be >70% after initial queries
+5. **Use streaming** (`/api/query/stream`) for better UX with multiple authors
+6. **Set reasonable limits** (max_authors=3-5) to control costs and response time
+7. **Optimal threshold** is 0.60 (empirically tested) - adjust if needed
+8. **Regular testing** with `pytest` and performance scripts
+9. **Check telemetry** weekly to understand usage patterns
 
 ---
 
@@ -504,10 +521,12 @@ settings:
 
 After getting the basic system running:
 
-1. Add more authors (Nietzsche, Plato, etc.)
-2. Implement multi-panel support
-3. Set up custom domain
-4. Add user authentication
-5. Implement conversation history
-6. Build analytics dashboard
+1. Add more authors (Nietzsche, Plato, Beauvoir, etc.)
+2. Implement multi-panel support for specialized conversations
+3. Set up custom domain for production deployment
+4. Add user authentication and rate limiting
+5. Implement conversation history and persistence
+6. Build analytics dashboard for usage insights
+7. Optimize vector database performance
+8. Add more sophisticated caching strategies
 
