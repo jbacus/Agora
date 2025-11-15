@@ -518,6 +518,145 @@ def create_router(services: Dict) -> APIRouter:
                 detail="Failed to get author rankings"
             )
 
+    @router.post("/query/debate/agentic/stream")
+    async def query_agentic_debate_stream(request: DebateRequest):
+        """
+        Stream agentic debate responses using Server-Sent Events.
+
+        Returns responses incrementally as each round and author completes,
+        providing a better user experience for multi-round debates.
+        """
+        async def generate():
+            try:
+                # Create Query object
+                query = Query(
+                    text=request.text,
+                    specified_authors=request.specified_authors,
+                    max_authors=request.max_authors,
+                    min_authors=request.min_authors,
+                    relevance_threshold=request.relevance_threshold
+                )
+
+                # Get services
+                semantic_router = services["semantic_router"]
+                rag_pipeline = services["rag_pipeline"]
+                authors_dict = services["authors"]
+                llm_client = services["llm_client"]
+
+                # Step 1: Select authors
+                logger.info(f"Selecting authors for streaming agentic debate: {query.text[:50]}...")
+                selection_result = semantic_router.select_authors(query)
+
+                if not selection_result.selected_authors:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'No relevant authors found'})}\n\n"
+                    return
+
+                if len(selection_result.selected_authors) < 2:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Debate requires at least 2 authors'})}\n\n"
+                    return
+
+                # Get author objects
+                selected_author_objs = [
+                    authors_dict[author_id]
+                    for author_id in selection_result.selected_authors
+                    if author_id in authors_dict
+                ]
+
+                # Send selected authors
+                yield f"data: {json.dumps({'type': 'authors', 'authors': [{'id': a.id, 'name': a.name} for a in selected_author_objs]})}\n\n"
+
+                # Step 2: Generate initial responses
+                logger.info("Generating initial responses...")
+                yield f"data: {json.dumps({'type': 'round_start', 'round_number': 1, 'round_type': 'initial'})}\n\n"
+
+                initial_responses = await rag_pipeline.generate_responses_concurrent(
+                    query=query,
+                    authors=selected_author_objs,
+                    query_embedding=selection_result.query_vector
+                )
+
+                # Stream initial responses
+                for response in initial_responses:
+                    yield f"data: {json.dumps({'type': 'response', 'round_number': 1, 'author_id': response.author_id, 'author_name': response.author_name, 'response_text': response.response_text, 'relevance_score': response.relevance_score, 'retrieved_chunks': response.retrieved_chunks})}\n\n"
+
+                # Step 3: Orchestrate additional rounds with streaming
+                from src.processing.agentic_debate_orchestrator import (
+                    AgenticDebateOrchestrator,
+                    SharedDebateKnowledgeBase,
+                    DebateAgent
+                )
+
+                knowledge_base = SharedDebateKnowledgeBase()
+
+                # Record initial responses
+                for response in initial_responses:
+                    await knowledge_base.record_response(
+                        round_number=1,
+                        author_id=response.author_id,
+                        author_name=response.author_name,
+                        response_text=response.response_text,
+                        tool_uses=0,
+                        reasoning_steps=0
+                    )
+
+                # Create debate agents
+                agents = {
+                    author.id: DebateAgent(
+                        author=author,
+                        rag_pipeline=rag_pipeline,
+                        llm_client=llm_client,
+                        knowledge_base=knowledge_base,
+                        max_response_tokens=400,
+                        temperature=0.7
+                    )
+                    for author in selected_author_objs
+                }
+
+                # Additional rounds
+                num_rounds = request.num_rounds
+                previous_responses = initial_responses
+
+                for round_num in range(2, num_rounds + 1):
+                    round_type = "rebuttal" if round_num == 2 else "response"
+                    yield f"data: {json.dumps({'type': 'round_start', 'round_number': round_num, 'round_type': round_type})}\n\n"
+
+                    logger.info(f"Generating agentic round {round_num}...")
+
+                    # Generate responses for this round
+                    for agent in agents.values():
+                        # Get other authors' responses
+                        other_responses = [
+                            resp for resp in previous_responses
+                            if resp.author_id != agent.author.id
+                        ]
+
+                        # Generate response
+                        response = await agent.generate_response(
+                            query=query,
+                            other_responses=other_responses,
+                            round_number=round_num,
+                            use_tools=True
+                        )
+
+                        # Stream the response immediately
+                        yield f"data: {json.dumps({'type': 'response', 'round_number': round_num, 'author_id': response.author_id, 'author_name': response.author_name, 'response_text': response.response_text, 'relevance_score': response.relevance_score, 'retrieved_chunks': response.retrieved_chunks})}\n\n"
+
+                        # Update previous responses list
+                        if round_num == 2:
+                            previous_responses = [response]
+                        else:
+                            previous_responses.append(response)
+
+                # Send completion signal
+                stats = await knowledge_base.get_stats()
+                yield f"data: {json.dumps({'type': 'done', 'stats': stats})}\n\n"
+
+            except Exception as e:
+                logger.error(f"Error in streaming agentic debate: {e}", exc_info=True)
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
+
     @router.post("/query/stream")
     async def query_stream(request: QueryRequest):
         """

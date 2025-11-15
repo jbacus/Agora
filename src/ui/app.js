@@ -51,8 +51,8 @@ queryInput.addEventListener('keydown', (e) => {
 });
 
 async function submitQuery(query, isDebate = false) {
-    // Use agentic debate endpoint for enhanced tool-using debates
-    const endpoint = isDebate ? '/api/query/debate/agentic' : '/api/query';
+    // Use streaming for debates, regular endpoint for queries
+    const endpoint = isDebate ? '/api/query/debate/agentic/stream' : '/api/query';
     const body = isDebate
         ? { text: query, max_authors: 5, num_rounds: parseInt(numRoundsInput.value) || 2 }
         : { text: query, max_authors: 5, relevance_threshold: 0.7 };
@@ -63,7 +63,9 @@ async function submitQuery(query, isDebate = false) {
         body: JSON.stringify(body)
     });
     if (!response.ok) throw new Error('Query failed');
-    return response.json();
+
+    // Return response object for streaming, or JSON for regular query
+    return isDebate ? response : response.json();
 }
 
 function showLoading(isDebate = false) {
@@ -223,12 +225,13 @@ async function handleSubmit(isDebate = false) {
     showLoading(isDebate);
 
     try {
-        const data = await submitQuery(query, isDebate);
-        hideLoading();
-
-        if (isDebate && data.rounds) {
-            displayDebate(data);
+        if (isDebate) {
+            // Handle streaming debate
+            await handleStreamingDebate(query);
         } else {
+            // Handle regular query
+            const data = await submitQuery(query, false);
+            hideLoading();
             displayAuthors(data.authors);
             displayResponses(data.authors);
         }
@@ -239,6 +242,101 @@ async function handleSubmit(isDebate = false) {
                 <p class="text-gray-800 dark:text-gray-200 font-medium">Error: ${error.message}</p>
             </div>`;
     }
+}
+
+async function handleStreamingDebate(query) {
+    const response = await submitQuery(query, true);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    const debateState = {
+        rounds: [],
+        currentRound: null,
+        authors: []
+    };
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+
+                const data = JSON.parse(line.slice(6));
+
+                switch (data.type) {
+                    case 'authors':
+                        debateState.authors = data.authors;
+                        displayAuthors(data.authors);
+                        hideLoading();
+                        break;
+
+                    case 'round_start':
+                        debateState.currentRound = {
+                            round_number: data.round_number,
+                            round_type: data.round_type,
+                            author_responses: []
+                        };
+                        debateState.rounds.push(debateState.currentRound);
+                        displayDebateStreaming(debateState);
+                        break;
+
+                    case 'response':
+                        const authorResponse = {
+                            author_id: data.author_id,
+                            author_name: data.author_name,
+                            response_text: data.response_text,
+                            relevance_score: data.relevance_score,
+                            retrieved_chunks: data.retrieved_chunks
+                        };
+                        debateState.currentRound.author_responses.push(authorResponse);
+                        displayDebateStreaming(debateState);
+                        break;
+
+                    case 'done':
+                        console.log('Debate complete. Stats:', data.stats);
+                        break;
+
+                    case 'error':
+                        throw new Error(data.message);
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+function displayDebateStreaming(debateState) {
+    // Display rounds as they come in
+    responsesDiv.innerHTML = debateState.rounds.map((round, roundIdx) => `
+        <div class="mb-10">
+            <span class="round-badge">
+                Round ${round.round_number}: ${getRoundLabel(round.round_type)}
+            </span>
+            <div class="space-y-6 mt-4">
+                ${round.author_responses.map(response => `
+                    <div class="author-card">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-xl mb-1">${response.author_name}</h3>
+                                ${round.round_number === 1 ? `<p class="text-sm text-gray-500 dark:text-gray-400">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="prose">
+                            ${formatResponse(response.response_text)}
+                            ${buildCitations(response)}
+                        </div>
+                    </div>
+                `).join('')}
+                ${round.author_responses.length < debateState.authors.length ? '<div class="author-card animate-pulse"><div class="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div></div>' : ''}
+            </div>
+        </div>
+    `).join('');
 }
 
 function handleClear() {
