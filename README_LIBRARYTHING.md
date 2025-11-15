@@ -26,7 +26,10 @@ This pipeline automates the workflow of:
 ### 2. Run the Acquisition Script
 
 ```bash
+# Works with both TSV and JSON formats
 python scripts/acquire_from_librarything.py --input /path/to/LibraryThing_export.tsv
+# or
+python scripts/acquire_from_librarything.py --input /path/to/librarything_export.json
 ```
 
 This will:
