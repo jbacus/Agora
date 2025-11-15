@@ -170,7 +170,7 @@ def select_authors(query: Query) -> AuthorSelectionResult:
 ```
 
 **Selection Methods**:
-- **threshold**: All authors above relevance threshold (0.7 default)
+- **threshold**: All authors above relevance threshold (0.60 default, empirically tested)
 - **fallback_top_k**: Top-K authors if threshold not met
 - **specified**: User-specified authors (bypasses routing)
 
@@ -270,11 +270,11 @@ async def generate_responses_concurrent(
 
 3. SemanticRouter embeds query and calculates similarities
    ├─ Query vector: [0.23, -0.15, 0.42, ...]
-   ├─ Marx similarity: 0.45 (below threshold)
+   ├─ Marx similarity: 0.45 (below 0.60 threshold)
    ├─ Whitman similarity: 0.78 (above threshold)
-   └─ Baudelaire similarity: 0.82 (above threshold)
+   └─ Manson similarity: 0.82 (above threshold)
 
-   Selected: [Whitman, Baudelaire] (threshold method)
+   Selected: [Whitman, Manson] (threshold method)
 
 4. RAG Pipeline generates responses concurrently
 
@@ -284,10 +284,10 @@ async def generate_responses_concurrent(
    ├─ Call LLM with Whitman system prompt
    └─ Response: "Life is the grand song of existence..."
 
-   For Baudelaire:
+   For Manson:
    ├─ Retrieve top-5 chunks from "Subtle Art"
    ├─ Construct context
-   ├─ Call LLM with Baudelaire system prompt
+   ├─ Call LLM with Manson system prompt
    └─ Response: "Look, the meaning of life is whatever..."
 
 5. ResponseAggregator formats results
@@ -299,11 +299,13 @@ async def generate_responses_concurrent(
 
 ## Scalability Considerations
 
-### Current Limitations
-- Single-threaded LLM calls (API rate limits)
-- Local vector database (ChromaDB) limited to single machine
-- No caching of responses
-- Synchronous embedding generation
+### Current Implementations & Optimizations
+- ✅ Concurrent LLM calls for multiple authors (asyncio)
+- ✅ Response caching with configurable TTL (default 3600s)
+- ✅ Telemetry tracking for performance metrics
+- ✅ Streaming support via Server-Sent Events
+- Local vector database (ChromaDB) - single machine deployment
+- Async/await for parallel processing
 
 ### Scaling Strategies
 
@@ -312,17 +314,20 @@ async def generate_responses_concurrent(
 - Use Pinecone (cloud vector DB) for distributed storage
 - Implement Redis for response caching
 
-**Performance Optimization**:
-- Pre-compute and cache author expertise profiles
-- Batch embedding generation
-- Streaming responses for lower perceived latency
-- Connection pooling for database
+**Performance Optimization (Implemented)**:
+- ✅ Pre-computed author expertise profiles
+- ✅ Response caching with semantic similarity
+- ✅ Streaming responses via SSE (Server-Sent Events)
+- ✅ Concurrent request processing with asyncio
+- ✅ Telemetry and analytics tracking
 
 **Future Enhancements**:
-- WebSocket support for streaming responses
-- Response caching with TTL
-- Rate limiting per user
-- Analytics and usage tracking
+- WebSocket support for bi-directional streaming
+- Advanced cache strategies (semantic similarity-based)
+- Per-user rate limiting and quotas
+- Real-time analytics dashboard
+- Multi-region deployment
+- Database connection pooling
 
 ## Security
 
@@ -369,9 +374,9 @@ GET /api/health
 - ChromaDB / Pinecone (vector database)
 
 **LLM Providers**:
-- Google Gemini 2.0 Flash
+- Google Gemini 2.0 Flash Exp (default, recommended)
 - OpenAI GPT-4 Turbo
-- Anthropic Claude 3
+- Anthropic Claude 3 Opus
 
 **Embeddings**:
 - Google text-embedding-004 (768d)
@@ -405,6 +410,10 @@ MAX_AUTHORS=5
 TOP_K_CHUNKS=5
 MAX_RESPONSE_TOKENS=300
 LLM_TEMPERATURE=0.7
+
+# Cache Configuration
+ENABLE_CACHE=true
+CACHE_TTL_SECONDS=3600
 ```
 
 See [README.md](../README.md) for full configuration reference.

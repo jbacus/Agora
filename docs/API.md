@@ -77,7 +77,7 @@ Content-Type: application/json
 | `specified_authors` | string[] | No | null | Specific author IDs to query. If null, uses semantic routing. |
 | `max_authors` | integer | No | 5 | Maximum number of authors to include (2-10) |
 | `min_authors` | integer | No | 2 | Minimum number of authors to include (1-5) |
-| `relevance_threshold` | float | No | 0.7 | Minimum similarity score for author selection (0.0-1.0) |
+| `relevance_threshold` | float | No | 0.60 | Minimum similarity score for author selection (0.0-1.0) |
 
 **Response** (200 OK):
 ```json
@@ -92,8 +92,8 @@ Content-Type: application/json
       "generation_time_ms": 2341.5
     },
     {
-      "author_id": "baudelaire",
-      "author_name": "Mark Baudelaire",
+      "author_id": "manson",
+      "author_name": "Mark Manson",
       "response_text": "Look, the whole 'meaning of life' question is kind of bullshit. You're asking the wrong question...\n\nThe meaning of life is whatever values you choose to give a fuck about. That's it. No cosmic purpose handed down from above...\n\nStop seeking some universal answer and start taking responsibility for creating your own meaning through the struggles you choose to endure.",
       "relevance_score": 0.78,
       "generation_time_ms": 2156.3
@@ -197,18 +197,20 @@ GET /api/authors
       ]
     },
     {
-      "id": "baudelaire",
-      "name": "Mark Baudelaire",
+      "id": "manson",
+      "name": "Mark Manson",
       "expertise_domains": [
         "psychology",
         "self_help",
         "personal_development",
-        "values"
+        "values",
+        "modern_culture"
       ],
-      "bio": "Mark Baudelaire is a contemporary American author and blogger...",
+      "bio": "Mark Manson is a contemporary American author and blogger known for his contrarian approach to self-help and personal development...",
       "major_works": [
         "The Subtle Art of Not Giving a F*ck (2016)",
-        "Everything Is F*cked (2019)"
+        "Everything Is F*cked (2019)",
+        "Models: Attract Women Through Honesty (2011)"
       ]
     }
   ],
@@ -381,7 +383,7 @@ curl -X POST http://localhost:8000/api/query \
   -d '{
     "text": "What is the meaning of life?",
     "max_authors": 3,
-    "relevance_threshold": 0.7
+    "relevance_threshold": 0.60
   }'
 ```
 
@@ -462,7 +464,7 @@ async function queryDebatePanel(
 const result = await queryDebatePanel({
   text: 'What is the meaning of life?',
   max_authors: 3,
-  relevance_threshold: 0.7,
+  relevance_threshold: 0.60,
 });
 
 console.log(`Got ${result.author_count} responses`);
@@ -486,7 +488,7 @@ def query_debate_panel(
     specified_authors: Optional[List[str]] = None,
     max_authors: int = 5,
     min_authors: int = 2,
-    relevance_threshold: float = 0.7
+    relevance_threshold: float = 0.60
 ) -> dict:
     """Query the Virtual Debate Panel."""
     payload = {
