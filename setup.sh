@@ -28,7 +28,9 @@ GEMINI_KEY="$(gcloud secrets versions access latest --secret=GEMINI_API_KEY 2>/d
 
 if [ -n "$GEMINI_KEY" ]; then
     echo "✅ API key retrieved from Secret Manager"
-    export GEMINI_API_KEY="$GEMINI_KEY"
+    # NOTE: We don't export here - we only write to .env
+    # This prevents the environment variable from persisting in the shell
+    # and overriding .env in future runs
 
     # Update .env file with the key (macOS compatible sed)
     if [[ "$OSTYPE" == "darwin"* ]]; then
