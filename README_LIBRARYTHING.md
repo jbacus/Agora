@@ -139,6 +139,55 @@ python scripts/acquire_from_librarything.py \
     --verbose
 ```
 
+### Rate Limiting
+
+**NEW!** Configurable rate limiting to avoid hitting API limits:
+
+```bash
+# Default: 2s between API calls, 3s between downloads
+python scripts/acquire_from_librarything.py \
+    --input library.tsv
+
+# More conservative (recommended for large libraries, 500+ books):
+python scripts/acquire_from_librarything.py \
+    --input library.tsv \
+    --api-delay 3 \
+    --download-delay 5
+
+# Faster (use with caution, may hit rate limits):
+python scripts/acquire_from_librarything.py \
+    --input library.tsv \
+    --api-delay 1 \
+    --download-delay 2
+```
+
+**Estimated time for 600 books:**
+- Default settings (2s/3s): ~50 minutes
+- Conservative settings (3s/5s): ~80 minutes
+- Faster settings (1s/2s): ~30 minutes (may hit rate limits)
+
+### Progress Tracking and Resume
+
+**NEW!** The script now saves progress and can resume if interrupted:
+
+```bash
+# Run the script normally - progress is saved automatically
+python scripts/acquire_from_librarything.py --input library.tsv
+
+# If interrupted, resume from where it left off
+python scripts/acquire_from_librarything.py --input library.tsv --resume
+
+# Start fresh (delete progress file)
+python scripts/acquire_from_librarything.py --input library.tsv --reset-progress
+
+# Custom progress file location
+python scripts/acquire_from_librarything.py \
+    --input library.tsv \
+    --progress-file /path/to/progress.json
+```
+
+Progress is saved in `.acquisition_progress.json` by default and tracks which books have been processed (whether successful or not).
+
 ## Output Files
 
 The script generates several output files:
