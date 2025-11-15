@@ -51,7 +51,8 @@ queryInput.addEventListener('keydown', (e) => {
 });
 
 async function submitQuery(query, isDebate = false) {
-    const endpoint = isDebate ? '/api/query/debate' : '/api/query';
+    // Use agentic debate endpoint for enhanced tool-using debates
+    const endpoint = isDebate ? '/api/query/debate/agentic' : '/api/query';
     const body = isDebate
         ? { text: query, max_authors: 5, num_rounds: parseInt(numRoundsInput.value) || 2 }
         : { text: query, max_authors: 5, relevance_threshold: 0.7 };
@@ -71,7 +72,7 @@ function showLoading(isDebate = false) {
     debateBtn.disabled = true;
     loadingDiv.classList.remove('hidden');
     loadingDiv.querySelector('p').textContent = isDebate
-        ? 'Starting debate...'
+        ? 'Starting agentic debate (authors will use tools to search their works)...'
         : 'Consulting the panel...';
     responsesDiv.innerHTML = '';
     selectedAuthorsDiv.classList.add('hidden');
