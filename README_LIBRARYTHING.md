@@ -25,11 +25,20 @@ This pipeline automates the workflow of:
 
 ### 2. Run the Acquisition Script
 
+**Choose your version:**
+
+**Sequential (Simple):**
 ```bash
 # Works with both TSV and JSON formats
 python scripts/acquire_from_librarything.py --input /path/to/LibraryThing_export.tsv
 # or
 python scripts/acquire_from_librarything.py --input /path/to/librarything_export.json
+```
+
+**Agentic (Fast, Parallel):**
+```bash
+# Multi-agent system with parallel execution
+python scripts/acquire_from_librarything_agentic.py --input library.json --max-concurrent 20
 ```
 
 This will:
@@ -535,20 +544,38 @@ python -m src.main
 # Ask: "What do Marx and Whitman think about democracy?"
 ```
 
+## Two Implementations Available
+
+### Sequential Version (`acquire_from_librarything.py`)
+- **Best for**: Small libraries (< 20 authors), simple use cases
+- **Pros**: Simple, easy to debug, fewer dependencies
+- **Cons**: Slower for large libraries
+
+### Agentic Version (`acquire_from_librarything_agentic.py`)
+- **Best for**: Large libraries (> 20 authors), production use
+- **Pros**: 20-50x faster, learns from patterns, adaptive strategies
+- **Cons**: More complex, requires async understanding
+- **See**: [Agentic Architecture Documentation](docs/agentic-architecture.md)
+
+Both versions produce identical outputs and use the same command-line interface.
+
 ## Files Created by This Tool
 
 ```
 Agora/
 ├── scripts/
-│   └── acquire_from_librarything.py  ← Main script
+│   ├── acquire_from_librarything.py         ← Sequential version
+│   └── acquire_from_librarything_agentic.py ← Agentic version
 ├── examples/
-│   └── librarything_export_sample.tsv ← Example input
+│   ├── librarything_export_sample.tsv       ← Example TSV input
+│   └── librarything_export_sample.json      ← Example JSON input
 ├── docs/
-│   └── librarything-acquisition.md    ← Detailed docs
-├── acquisition_report.txt             ← Generated report
-├── acquisition_report.json            ← Generated data
-├── download_texts.sh                  ← Generated script
-└── data/raw/                          ← Downloaded texts
+│   ├── librarything-acquisition.md          ← Detailed docs
+│   └── agentic-architecture.md              ← Agentic design docs
+├── acquisition_report.txt                   ← Generated report
+├── acquisition_report.json                  ← Generated data
+├── download_texts.sh                        ← Generated script
+└── data/raw/                                ← Downloaded texts
     ├── marx/
     ├── whitman/
     └── austen/
