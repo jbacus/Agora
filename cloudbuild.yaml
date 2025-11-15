@@ -8,19 +8,31 @@
 #   - Frontend: Static files to Cloud Storage
 
 steps:
-  # Step 1: Build Docker image
+  # Step 0: Pull previous image for caching (ignore errors if doesn't exist)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'pull-cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:latest || exit 0
+    timeout: '300s'
+
+  # Step 1: Build Docker image with BuildKit and cache
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-image'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - 'build'
+      - '--cache-from'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:latest'
+      - '--build-arg'
+      - 'BUILDKIT_INLINE_CACHE=1'
       - '--build-arg'
       - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${_SERVICE_NAME}:latest'
-      - '.'
-    timeout: '1200s'
+      # ... rest of args stay the same
+    waitFor: ['pull-cache']
 
   # Step 2: Push image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
