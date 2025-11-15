@@ -15,6 +15,7 @@ from src.data import get_embedding_provider, get_vector_db
 from src.data.models import Author, VoiceCharacteristics
 from src.processing import PromptManager, RAGPipeline, get_llm_client
 from src.processing.debate_orchestrator import DebateOrchestrator
+from src.processing.agentic_debate_orchestrator import AgenticDebateOrchestrator
 from src.routing import ResponseAggregator, SemanticRouter
 
 from .routes import create_router
@@ -112,6 +113,15 @@ async def lifespan(app: FastAPI):
         )
         services["debate_orchestrator"] = debate_orchestrator
 
+        # Initialize agentic debate orchestrator
+        agentic_debate_orchestrator = AgenticDebateOrchestrator(
+            rag_pipeline=rag_pipeline,
+            llm_client=llm_client,
+            max_response_tokens=settings.max_response_tokens,
+            temperature=settings.llm_temperature
+        )
+        services["agentic_debate_orchestrator"] = agentic_debate_orchestrator
+
         # Initialize response aggregator
         response_aggregator = ResponseAggregator()
         services["response_aggregator"] = response_aggregator
@@ -140,7 +150,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=["http://localhost:3000", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -161,6 +171,7 @@ async def root():
         "endpoints": {
             "query": "/api/query",
             "debate": "/api/query/debate",
+            "agentic_debate": "/api/query/debate/agentic",
             "authors": "/api/authors",
             "health": "/api/health",
             "docs": "/docs"
