@@ -1,43 +1,78 @@
 // Agora Virtual Debate Panel - Frontend Application
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
     : 'https://agora-backend-uc.a.run.app';
 
 const queryInput = document.getElementById('query-input');
 const submitBtn = document.getElementById('submit-btn');
+const debateBtn = document.getElementById('debate-btn');
 const clearBtn = document.getElementById('clear-btn');
+const numRoundsInput = document.getElementById('num-rounds');
 const selectedAuthorsDiv = document.getElementById('selected-authors');
 const authorsListDiv = document.getElementById('authors-list');
 const responsesDiv = document.getElementById('responses');
 const loadingDiv = document.getElementById('loading');
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
 
 let currentQuery = '';
 let isLoading = false;
 
-submitBtn.addEventListener('click', handleSubmit);
+// Theme management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark');
+        themeIcon.textContent = '🌙';
+    } else {
+        document.body.classList.remove('dark');
+        themeIcon.textContent = '☀️';
+    }
+}
+
+function toggleTheme() {
+    document.body.classList.toggle('dark');
+    const isDark = document.body.classList.contains('dark');
+    themeIcon.textContent = isDark ? '🌙' : '☀️';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
+// Event listeners
+submitBtn.addEventListener('click', () => handleSubmit(false));
+debateBtn.addEventListener('click', () => handleSubmit(true));
 clearBtn.addEventListener('click', handleClear);
+themeToggle.addEventListener('click', toggleTheme);
 
 queryInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
         e.preventDefault();
-        handleSubmit();
+        handleSubmit(false);
     }
 });
 
-async function submitQuery(query) {
-    const response = await fetch(`${API_URL}/api/query`, {
+async function submitQuery(query, isDebate = false) {
+    const endpoint = isDebate ? '/api/query/debate' : '/api/query';
+    const body = isDebate
+        ? { text: query, max_authors: 5, num_rounds: parseInt(numRoundsInput.value) || 2 }
+        : { text: query, max_authors: 5, relevance_threshold: 0.7 };
+
+    const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, max_authors: 5, relevance_threshold: 0.7 })
+        body: JSON.stringify(body)
     });
     if (!response.ok) throw new Error('Query failed');
     return response.json();
 }
 
-function showLoading() {
+function showLoading(isDebate = false) {
     isLoading = true;
     submitBtn.disabled = true;
+    debateBtn.disabled = true;
     loadingDiv.classList.remove('hidden');
+    loadingDiv.querySelector('p').textContent = isDebate
+        ? 'Starting debate...'
+        : 'Consulting the panel...';
     responsesDiv.innerHTML = '';
     selectedAuthorsDiv.classList.add('hidden');
 }
@@ -45,58 +80,165 @@ function showLoading() {
 function hideLoading() {
     isLoading = false;
     submitBtn.disabled = false;
+    debateBtn.disabled = false;
     loadingDiv.classList.add('hidden');
 }
 
 function displayAuthors(authors) {
-    authorsListDiv.innerHTML = authors.map(author => `
-        <span class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm">
-            ${author.name}
+    const authorList = Array.isArray(authors) ? authors : authors.map(a => ({
+        name: a.author_name,
+        id: a.author_id
+    }));
+
+    authorsListDiv.innerHTML = authorList.map(author => `
+        <span class="author-badge">
+            ${author.name || author.author_name}
         </span>
     `).join('');
     selectedAuthorsDiv.classList.remove('hidden');
 }
 
+function formatResponse(text) {
+    // Split into paragraphs
+    const paragraphs = text.split('\n\n').filter(p => p.trim());
+
+    return paragraphs.map(p => {
+        // Add emphasis for quoted text or italicized phrases
+        let formatted = p;
+
+        // Convert **bold** to <strong>
+        formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Convert *italic* to <em>
+        formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // Convert _italic_ to <em>
+        formatted = formatted.replace(/_(.+?)_/g, '<em>$1</em>');
+
+        return `<p>${formatted}</p>`;
+    }).join('');
+}
+
+function buildCitations(response) {
+    // If retrieved_chunks exist, build citations
+    if (!response.retrieved_chunks || response.retrieved_chunks.length === 0) {
+        return '';
+    }
+
+    const uniqueSources = new Map();
+
+    response.retrieved_chunks.forEach(chunk => {
+        if (chunk.metadata && chunk.metadata.source) {
+            const source = chunk.metadata.source;
+            const key = source;
+
+            if (!uniqueSources.has(key)) {
+                const citation = {
+                    source: source,
+                    page: chunk.metadata.page_number || chunk.metadata.chapter || null
+                };
+                uniqueSources.set(key, citation);
+            }
+        }
+    });
+
+    if (uniqueSources.size === 0) {
+        return '';
+    }
+
+    const citationList = Array.from(uniqueSources.values())
+        .map(c => {
+            if (c.page) {
+                return `<span class="citation-title">${c.source}</span>, ${c.page}`;
+            }
+            return `<span class="citation-title">${c.source}</span>`;
+        })
+        .join('; ');
+
+    return `<div class="citation">Sources: ${citationList}</div>`;
+}
+
 function displayResponses(responses) {
     responsesDiv.innerHTML = responses.map(response => `
-        <div class="author-card ${response.author_id}">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-xl">
-                    ${getAuthorEmoji(response.author_id)}
-                </div>
+        <div class="author-card">
+            <div class="flex items-center gap-4 mb-6">
                 <div>
-                    <h3 class="font-bold text-lg">${response.author_name}</h3>
-                    <p class="text-sm text-gray-500">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>
+                    <h3 class="font-bold text-xl mb-1">${response.author_name}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>
                 </div>
             </div>
-            <div class="prose dark:prose-invert">${formatResponse(response.response)}</div>
+            <div class="prose">
+                ${formatResponse(response.response_text)}
+                ${buildCitations(response)}
+            </div>
         </div>
     `).join('');
 }
 
-function getAuthorEmoji(authorId) {
-    return { 'marx': '🔨', 'whitman': '🌿', 'baudelaire': '💪' }[authorId] || '📚';
+function displayDebate(debateData) {
+    // Show authors from first round
+    if (debateData.rounds && debateData.rounds[0]) {
+        displayAuthors(debateData.rounds[0].author_responses);
+    }
+
+    // Display rounds
+    responsesDiv.innerHTML = debateData.rounds.map((round, roundIdx) => `
+        <div class="mb-10">
+            <span class="round-badge">
+                Round ${round.round_number}: ${getRoundLabel(round.round_type)}
+            </span>
+            <div class="space-y-6 mt-4">
+                ${round.author_responses.map(response => `
+                    <div class="author-card">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div>
+                                <h3 class="font-bold text-xl mb-1">${response.author_name}</h3>
+                                ${round.round_number === 1 ? `<p class="text-sm text-gray-500 dark:text-gray-400">Relevance: ${(response.relevance_score * 100).toFixed(0)}%</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="prose">
+                            ${formatResponse(response.response_text)}
+                            ${buildCitations(response)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
 }
 
-function formatResponse(text) {
-    return text.split('\n\n').map(p => `<p>${p}</p>`).join('');
+function getRoundLabel(roundType) {
+    const labels = {
+        'initial': 'Initial Responses',
+        'rebuttal': 'Rebuttals',
+        'response': 'Continued Discussion'
+    };
+    return labels[roundType] || roundType;
 }
 
-async function handleSubmit() {
+async function handleSubmit(isDebate = false) {
     const query = queryInput.value.trim();
     if (!query || isLoading) return;
-    
+
     currentQuery = query;
-    showLoading();
-    
+    showLoading(isDebate);
+
     try {
-        const data = await submitQuery(query);
+        const data = await submitQuery(query, isDebate);
         hideLoading();
-        displayAuthors(data.selected_authors);
-        displayResponses(data.responses);
+
+        if (isDebate && data.rounds) {
+            displayDebate(data);
+        } else {
+            displayAuthors(data.authors);
+            displayResponses(data.authors);
+        }
     } catch (error) {
         hideLoading();
-        responsesDiv.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-lg p-4"><p class="text-red-800">Error: ${error.message}</p></div>`;
+        responsesDiv.innerHTML = `
+            <div class="border border-gray-300 dark:border-gray-700 p-6">
+                <p class="text-gray-800 dark:text-gray-200 font-medium">Error: ${error.message}</p>
+            </div>`;
     }
 }
 
@@ -106,5 +248,8 @@ function handleClear() {
     selectedAuthorsDiv.classList.add('hidden');
     currentQuery = '';
 }
+
+// Initialize theme on load
+initTheme();
 
 console.log('Agora Virtual Debate Panel loaded');

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,41 +8,62 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-    <div id="app" class="container mx-auto px-4 py-8 max-w-6xl">
-        <header class="mb-8">
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Agora
-            </h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">Virtual Debate Panel</p>
+<body>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+        <span id="theme-icon">☀️</span>
+    </button>
+
+    <div id="app" class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="mb-12">
+            <h1 class="text-5xl font-bold mb-2" style="letter-spacing: -1px;">Agora</h1>
+            <p class="text-gray-600 dark:text-gray-400 text-lg">Virtual Debate Panel</p>
         </header>
 
-        <div id="query-section" class="mb-8">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div id="query-section" class="mb-12">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8">
                 <textarea
                     id="query-input"
-                    placeholder="What is freedom? How should we live?"
-                    class="w-full p-4 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700"
-                    rows="3"
+                    placeholder="What is freedom? How should we live? What is the meaning of life?"
+                    class="w-full p-4 border rounded resize-none focus:ring-0"
+                    rows="4"
+                    style="font-size: 16px;"
                 ></textarea>
-                <div class="flex gap-4 mt-4">
-                    <button id="submit-btn" class="btn-primary">Ask the Panel</button>
-                    <button id="clear-btn" class="btn-secondary">Clear</button>
+                <div class="flex justify-between items-center gap-4 mt-6">
+                    <div class="flex gap-3">
+                        <button id="submit-btn" class="btn-ask">Ask the Panel</button>
+                        <button id="debate-btn" class="btn-debate">Debate</button>
+                        <button id="clear-btn" class="btn-clear">Clear</button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label for="num-rounds" class="text-sm text-gray-600 dark:text-gray-400 font-medium">Rounds:</label>
+                        <input
+                            type="number"
+                            id="num-rounds"
+                            min="2"
+                            max="4"
+                            value="2"
+                            class="w-16 px-3 py-2 border rounded text-center font-medium"
+                            style="font-size: 14px;"
+                        >
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="selected-authors" class="mb-8 hidden">
-            <h3 class="text-lg font-semibold mb-3">Responding Authors:</h3>
-            <div id="authors-list" class="flex gap-2"></div>
+            <h3 class="text-sm font-semibold mb-3 uppercase tracking-wide text-gray-600 dark:text-gray-400">Responding Authors</h3>
+            <div id="authors-list" class="flex gap-2 flex-wrap"></div>
         </div>
 
         <div id="responses" class="space-y-6"></div>
-        <div id="loading" class="hidden text-center py-12">
-            <div class="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p class="mt-4">Consulting the panel...</p>
+
+        <div id="loading" class="hidden text-center py-16">
+            <div class="spinner animate-spin h-12 w-12 border-4 rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600 dark:text-gray-400 font-medium">Consulting the panel...</p>
         </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>

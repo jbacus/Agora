@@ -1,71 +1,296 @@
-/* Agora Virtual Debate Panel Styles */
+/* Agora Virtual Debate Panel - Grayscale Helvetica Design */
+
+* {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
 
 :root {
-    --color-primary: #3B82F6;
-    --color-secondary: #6B7280;
-    --color-marx: #EF4444;
-    --color-whitman: #3B82F6;
-    --color-manson: #8B5CF6;
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-200: #e5e5e5;
+    --gray-300: #d4d4d4;
+    --gray-400: #a3a3a3;
+    --gray-500: #737373;
+    --gray-600: #525252;
+    --gray-700: #404040;
+    --gray-800: #262626;
+    --gray-900: #171717;
 }
 
-.btn-primary {
-    @apply bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium;
+/* Light mode (default) */
+body {
+    background-color: var(--gray-50);
+    color: var(--gray-900);
 }
 
-.btn-secondary {
-    @apply bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium;
+/* Dark mode */
+body.dark {
+    background-color: var(--gray-900);
+    color: var(--gray-100);
 }
 
+/* Button Styles - Distinct designs */
+.btn-ask {
+    background-color: var(--gray-900);
+    color: white;
+    border: 2px solid var(--gray-900);
+    padding: 12px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+
+.btn-ask:hover:not(:disabled) {
+    background-color: var(--gray-700);
+    border-color: var(--gray-700);
+}
+
+.btn-ask:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-debate {
+    background-color: white;
+    color: var(--gray-900);
+    border: 2px solid var(--gray-900);
+    padding: 12px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+
+.btn-debate:hover:not(:disabled) {
+    background-color: var(--gray-100);
+}
+
+.btn-debate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-clear {
+    background-color: transparent;
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    background-color: var(--gray-100);
+    color: var(--gray-900);
+}
+
+/* Dark mode button adjustments */
+body.dark .btn-ask {
+    background-color: white;
+    color: var(--gray-900);
+    border-color: white;
+}
+
+body.dark .btn-ask:hover:not(:disabled) {
+    background-color: var(--gray-200);
+}
+
+body.dark .btn-debate {
+    background-color: var(--gray-900);
+    color: white;
+    border-color: white;
+}
+
+body.dark .btn-debate:hover:not(:disabled) {
+    background-color: var(--gray-800);
+}
+
+body.dark .btn-clear {
+    color: var(--gray-400);
+    border-color: var(--gray-700);
+}
+
+body.dark .btn-clear:hover {
+    background-color: var(--gray-800);
+    color: var(--gray-200);
+}
+
+/* Author Cards */
 .author-card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 transition-all hover:shadow-xl;
+    background-color: white;
+    border: 1px solid var(--gray-200);
+    border-left: 4px solid var(--gray-900);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.author-card.marx {
-    @apply border-red-500;
+body.dark .author-card {
+    background-color: var(--gray-800);
+    border-color: var(--gray-700);
+    border-left-color: white;
 }
 
-.author-card.whitman {
-    @apply border-blue-500;
-}
-
-.author-card.manson {
-    @apply border-purple-500;
-}
-
+/* Author Badges */
 .author-badge {
-    @apply px-3 py-1 rounded-full text-sm font-medium;
+    display: inline-block;
+    padding: 6px 16px;
+    background-color: var(--gray-200);
+    color: var(--gray-900);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
-.author-badge.marx {
-    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+body.dark .author-badge {
+    background-color: var(--gray-700);
+    color: var(--gray-100);
 }
 
-.author-badge.whitman {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+/* Round Badges */
+.round-badge {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--gray-900);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
 }
 
-.author-badge.manson {
-    @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200;
+body.dark .round-badge {
+    background-color: white;
+    color: var(--gray-900);
 }
 
-.prose {
-    @apply max-w-none;
-}
-
+/* Typography - Paragraph spacing and emphasis */
 .prose p {
-    @apply mb-4 text-gray-700 dark:text-gray-300 leading-relaxed;
+    margin-bottom: 28px;
+    line-height: 1.8;
+    font-size: 16px;
+    color: var(--gray-800);
+}
+
+body.dark .prose p {
+    color: var(--gray-200);
 }
 
 .prose p:last-child {
-    @apply mb-0;
+    margin-bottom: 0;
+}
+
+.prose em {
+    font-style: italic;
+    font-weight: 400;
+}
+
+.prose strong {
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+body.dark .prose strong {
+    color: white;
+}
+
+/* Citations */
+.citation {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-300);
+    font-size: 13px;
+    color: var(--gray-600);
+    font-style: italic;
+}
+
+body.dark .citation {
+    border-top-color: var(--gray-700);
+    color: var(--gray-400);
+}
+
+.citation-title {
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* Input fields */
+textarea, input {
+    background-color: white;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-900);
+}
+
+body.dark textarea,
+body.dark input {
+    background-color: var(--gray-800);
+    border-color: var(--gray-700);
+    color: var(--gray-100);
+}
+
+textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--gray-900);
+}
+
+body.dark textarea:focus,
+body.dark input:focus {
+    border-color: white;
+}
+
+/* Dark mode toggle button */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--gray-900);
+    color: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s;
+}
+
+body.dark .theme-toggle {
+    background-color: white;
+    color: var(--gray-900);
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* Loading spinner */
+.spinner {
+    border-color: var(--gray-300);
+    border-top-color: var(--gray-900);
+}
+
+body.dark .spinner {
+    border-color: var(--gray-700);
+    border-top-color: white;
 }
 
 /* Smooth transitions */
 * {
-    @apply transition-colors duration-200;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
-/* Loading animation */
+/* Animation */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -81,13 +306,18 @@
 }
 
 ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    background-color: var(--gray-100);
+}
+
+body.dark ::-webkit-scrollbar-track {
+    background-color: var(--gray-800);
 }
 
 ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+    background-color: var(--gray-400);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-gray-500;
+    background-color: var(--gray-500);
 }
